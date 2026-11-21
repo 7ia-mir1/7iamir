@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Двор — Семья-Мир | 7ia-mir1.ru</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Philosopher:ital,wght@0,400;0,700;1,400&family=PT+Serif:wght@400;700&display=swap');
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: radial-gradient(circle at center, #241409 0%, #0d0703 100%);
+    font-family: 'PT Serif', serif;
+    color: #ffe8b3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    overflow-x: hidden;
+  }
+
+  /* Контейнер сцены двора */
+  .scene-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 1280px;
+    aspect-ratio: 16 / 9;
+    border: 6px solid #3a2210;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 180, 60, 0.2);
+    overflow: hidden;
+    background: #1a0f07;
+  }
+
+  .scene-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    user-select: none;
+  }
+
+  /* Интерактивная светящаяся область на группе людей (координаты точно по картинке dvor.jpeg) */
+  .hotspot-chat-group {
+    position: absolute;
+    left: 36.5%;
+    top: 41%;
+    width: 32.5%;
+    height: 22%;
+    border-radius: 28px;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+    /* Мягкое сказочное свечение вокруг группы людей */
+    background: radial-gradient(ellipse at center, rgba(255, 215, 100, 0.28) 0%, rgba(255, 170, 30, 0.12) 55%, rgba(255, 170, 30, 0) 80%);
+    box-shadow: 0 0 28px rgba(255, 210, 90, 0.55), inset 0 0 20px rgba(255, 225, 130, 0.45);
+    border: 2px solid rgba(255, 225, 130, 0.55);
+    animation: pulseGlow 2.4s infinite ease-in-out;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .hotspot-chat-group:hover {
+    background: radial-gradient(ellipse at center, rgba(255, 230, 130, 0.45) 0%, rgba(255, 185, 50, 0.25) 65%, transparent 90%);
+    box-shadow: 0 0 45px rgba(255, 225, 110, 0.95), inset 0 0 30px rgba(255, 240, 160, 0.75);
+    border-color: #fff3b0;
+    transform: scale(1.02);
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 22px rgba(255, 200, 70, 0.45), inset 0 0 15px rgba(255, 215, 110, 0.3);
+      border-color: rgba(255, 220, 120, 0.45);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(255, 220, 100, 0.85), inset 0 0 26px rgba(255, 235, 150, 0.65);
+      border-color: rgba(255, 240, 170, 0.9);
+    }
+  }
+
+  /* Подсказка-плашка над группой людей */
+  .hotspot-label {
+    margin-top: -42px;
+    background: linear-gradient(180deg, #5e381b 0%, #38200d 100%);
+    color: #ffe8b3;
+    border: 2px solid #f3c663;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-family: 'Philosopher', serif;
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 12px rgba(243, 198, 99, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    transition: transform 0.25s ease;
+  }
+
+  .hotspot-chat-group:hover .hotspot-label {
+    transform: translateY(-4px) scale(1.04);
+    background: linear-gradient(180deg, #754621 0%, #462810 100%);
+  }
+
+  .online-dot {
+    width: 10px;
+    height: 10px;
+    background: #38d949;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px #38d949;
+  }
+
+  /* Модальное окно с чатом поверх картины двора */
+  .chat-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 6, 2, 0.78);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+    animation: fadeInModal 0.25s ease;
+  }
+
+  .chat-modal-backdrop.open {
+    display: flex;
+  }
+
+  @keyframes fadeInModal {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .chat-modal-window {
+    width: 100%;
+    max-width: 1180px;
+    height: 90vh;
+    position: relative;
+    border-radius: 18px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.95);
+  }
+
+  .close-chat-btn {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    z-index: 120;
+    background: linear-gradient(180deg, #9e2a1f 0%, #63160e 100%);
+    color: #ffe8b3;
+    border: 3px solid #f3c663;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease;
+  }
+
+  .close-chat-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .chat-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 16px;
+    background: transparent;
+  }
+
+  @media (max-width: 768px) {
+    .hotspot-label {
+      font-size: 12px;
+      padding: 4px 10px;
+      margin-top: -32px;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Картина двора с интерактивной подсветкой группы людей -->
+  <div class="scene-wrapper">
+    <img src="dvor.jpeg" alt="Двор Семья-Мир" class="scene-image">
+
+    <!-- Светящаяся зона на группе людей у телеги -->
+    <div 
+      class="hotspot-chat-group" 
+      id="openChatHotspot" 
+      title="Нажмите, чтобы войти в Чат Семья-Мир"
+    >
+      <div class="hotspot-label">
+        <span class="online-dot"></span>
+        <span>Чат «Семья-Мир» (Кто в онлайн)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Всплывающее окно с чатом при клике на подсветку -->
+  <div class="chat-modal-backdrop" id="chatModal">
+    <div class="chat-modal-window">
+      <button class="close-chat-btn" id="closeChatBtn" title="Закрыть чат и вернуться во двор">✕</button>
+      <iframe src="chat_7ia_mir.html" class="chat-iframe" title="Чат Семья-Мир"></iframe>
+    </div>
+  </div>
+
+  <script>
+    const openChatHotspot = document.getElementById('openChatHotspot');
+    const chatModal = document.getElementById('chatModal');
+    const closeChatBtn = document.getElementById('closeChatBtn');
+
+    // Открытие чата при нажатии на подсветку группы людей
+    openChatHotspot.addEventListener('click', () => {
+      chatModal.classList.add('open');
+    });
+
+    // Закрытие по крестику
+    closeChatBtn.addEventListener('click', () => {
+      chatModal.classList.remove('open');
+    });
+
+    // Закрытие при клике по темному фону вокруг окна чата или клавише Esc
+    chatModal.addEventListener('click', (e) => {
+      if (e.target === chatModal) {
+        chatModal.classList.remove('open');
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && chatModal.classList.contains('open')) {
+        chatModal.classList.remove('open');
+      }
+    });
+  </script>
+
+</body>
+</html>

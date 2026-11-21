@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Справочное Бюро Лесовика — Диагностика пар</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 24px 16px;
+            background: radial-gradient(circle at top, #283820 0%, #141d10 60%, #0b1109 100%);
+            color: #f4e8d1;
+            font-family: 'Georgia', serif;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 820px;
+            margin: 55px auto 30px auto;
+            background: rgba(30, 22, 14, 0.96);
+            border: 3px solid #d4af37;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.9);
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed #d4af37;
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        h1 {
+            color: #ffd700;
+            margin: 0;
+            font-size: 24px;
+        }
+        .back-btn {
+            background: linear-gradient(to bottom, #8b0000, #500000);
+            color: #fff;
+            border: 1.5px solid #ffd700;
+            padding: 9px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .back-btn:hover {
+            box-shadow: 0 0 12px #ffd700;
+        }
+        .price-banner {
+            background: rgba(80, 250, 123, 0.12);
+            border: 1.5px solid #50fa7b;
+            color: #e2ffe9;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+        }
+        .partner-card {
+            background: rgba(48, 34, 20, 0.85);
+            border: 1.5px solid #b89356;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .partner-card h3 {
+            margin-top: 0;
+            color: #ffd700;
+            border-bottom: 1px dotted #b89356;
+            padding-bottom: 8px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 4px;
+            font-size: 14px;
+            color: #f0dfc3;
+        }
+        input, select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 9px 11px;
+            border-radius: 6px;
+            border: 1px solid #d4af37;
+            background: #1a1109;
+            color: #ffd700;
+            font-family: 'Georgia', serif;
+            font-size: 14.5px;
+        }
+        .run-btn {
+            display: block;
+            width: 100%;
+            margin-top: 22px;
+            padding: 14px;
+            background: linear-gradient(to bottom, #2fa855, #1b6932);
+            color: #fff;
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            font-family: 'Georgia', serif;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .run-btn:hover {
+            box-shadow: 0 0 16px #50fa7b;
+            transform: translateY(-1px);
+        }
+        .result-box {
+            margin-top: 24px;
+            padding: 20px;
+            background: linear-gradient(135deg, #fbf2de, #e7ce9e);
+            color: #2b180a;
+            border: 3px solid #8b5a2b;
+            border-radius: 12px;
+            display: none;
+            line-height: 1.65;
+        }
+        .result-box h2 {
+            color: #6b1d1d;
+            margin-top: 0;
+            border-bottom: 1.5px solid #8b5a2b;
+            padding-bottom: 8px;
+        }
+    </style>
+</head>
+<body translate="no" class="notranslate">
+    <script src="wallet.js"></script>
+
+    <div class="container">
+        <div class="header-bar">
+            <h1>🌲 Справочное Бюро Лесовика: Диагностика пары</h1>
+            <button class="back-btn" onclick="sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.replace('index.html?loc=ozero#ozero')">⬅ Вернуться к Озеру</button>
+        </div>
+
+        <div class="price-banner">
+            💰 <strong>Стоимость одной диагностики у Лешего: 20 монет</strong> (со скидкой ударника 50% — 10 монет). Каждая проведённая диагностика автоматически записывается в заветный Сундук у Озера.
+        </div>
+
+        <div class="grid-2">
+            <div class="partner-card">
+                <h3>👨 Первый партнёр (Мужчина)</h3>
+                <label>Имя или пометка:</label>
+                <input type="text" id="p1Name" placeholder="Например: Иван">
+                <label>Дата рождения:</label>
+                <input type="date" id="p1Birth">
+                <label>Группа крови:</label>
+                <select id="p1Blood">
+                    <option value="1">I (0) — Первая</option>
+                    <option value="2">II (A) — Вторая</option>
+                    <option value="3">III (B) — Третья</option>
+                    <option value="4">IV (AB) — Четвёртая</option>
+                </select>
+            </div>
+
+            <div class="partner-card">
+                <h3>👩 Второй партнёр (Женщина)</h3>
+                <label>Имя или пометка:</label>
+                <input type="text" id="p2Name" placeholder="Например: Марья">
+                <label>Дата рождения:</label>
+                <input type="date" id="p2Birth">
+                <label>Группа крови:</label>
+                <select id="p2Blood">
+                    <option value="1">I (0) — Первая</option>
+                    <option value="2">II (A) — Вторая</option>
+                    <option value="3">III (B) — Третья</option>
+                    <option value="4">IV (AB) — Четвёртая</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="run-btn" onclick="runPairDiagnostic()">🔍 Провести Диагностику пары (20 монет)</button>
+
+        <div class="result-box" id="diagResultBox"></div>
+    </div>
+
+    <script>
+        const ANIMALS = ['Обезьяна', 'Петух', 'Собака', 'Кабан', 'Крыса', 'Бык', 'Тигр', 'Кот (Кролик)', 'Дракон', 'Змея', 'Лошадь', 'Коза (Овца)'];
+
+        function getZodiacSign(day, month) {
+            const signs = [
+                { name: 'Козерог', m: 1, d: 20 }, { name: 'Водолей', m: 2, d: 19 },
+                { name: 'Рыбы', m: 3, d: 20 }, { name: 'Овен', m: 4, d: 20 },
+                { name: 'Телец', m: 5, d: 21 }, { name: 'Близнецы', m: 6, d: 21 },
+                { name: 'Рак', m: 7, d: 22 }, { name: 'Лев', m: 8, d: 23 },
+                { name: 'Дева', m: 9, d: 23 }, { name: 'Весы', m: 10, d: 23 },
+                { name: 'Скорпион', m: 11, d: 22 }, { name: 'Стрелец', m: 12, d: 21 },
+                { name: 'Козерог', m: 12, d: 31 }
+            ];
+            for (let s of signs) {
+                if (month === s.m && day <= s.d) return s.name;
+            }
+            return signs[month].name;
+        }
+
+        function sumDigitsToSingle(num) {
+            let s = num;
+            while (s > 9) {
+                s = String(s).split('').reduce((a, b) => a + Number(b), 0);
+            }
+            return s;
+        }
+
+        function runPairDiagnostic() {
+            const name1 = document.getElementById('p1Name').value.trim() || 'Партнёр 1';
+            const name2 = document.getElementById('p2Name').value.trim() || 'Партнёр 2';
+            const b1 = document.getElementById('p1Birth').value;
+            const b2 = document.getElementById('p2Birth').value;
+            const blood1 = Number(document.getElementById('p1Blood').value);
+            const blood2 = Number(document.getElementById('p2Blood').value);
+
+            if (!b1 || !b2) {
+                alert('Пожалуйста, укажите обе даты рождения для расчёта Диагностики!');
+                return;
+            }
+
+            if (window.GornitsaWallet && typeof GornitsaWallet.payCash === 'function') {
+                const pay = GornitsaWallet.payCash(20, 'diagnostics', `Диагностика пары: ${name1} и ${name2}`);
+                if (!pay.ok) {
+                    alert(pay.msg || 'Недостаточно наличных монет в кошельке (требуется 20 монет) или кошелёк забыт в Горнице!');
+                    return;
+                }
+            }
+
+            const d1 = new Date(b1);
+            const d2 = new Date(b2);
+
+            const z1 = getZodiacSign(d1.getDate(), d1.getMonth() + 1);
+            const z2 = getZodiacSign(d2.getDate(), d2.getMonth() + 1);
+            const an1 = ANIMALS[d1.getFullYear() % 12];
+            const an2 = ANIMALS[d2.getFullYear() % 12];
+            const num1 = sumDigitsToSingle(d1.getDate());
+            const num2 = sumDigitsToSingle(d2.getDate());
+
+            const bloodHarmony = (blood1 === blood2 || Math.abs(blood1 - blood2) === 2)
+                ? 'Благоприятный резонанс групп крови (высокая адаптивность в быту).'
+                : 'Разный ритм по группе крови (требуется взаимная уступчивость в привычках).';
+
+            const numDiff = Math.abs(num1 - num2);
+            const charSummary = (numDiff === 0 || numDiff === 3 || numDiff === 6)
+                ? 'Природное созвучие дневных чисел рождения (близкий темп принятия решений).'
+                : 'Различие личных чисел дня рождения (необходимо уважать личное пространство партнёра).';
+
+            const record = {
+                id: Date.now(),
+                dateStr: new Date().toLocaleString('ru-RU'),
+                name1, b1, z1, an1, blood1, num1,
+                name2, b2, z2, an2, blood2, num2,
+                bloodHarmony,
+                charSummary
+            };
+
+            try {
+                const list = JSON.parse(localStorage.getItem('GORNITSA_DIAG_ARCHIVE_V1') || '[]');
+                list.unshift(record);
+                localStorage.setItem('GORNITSA_DIAG_ARCHIVE_V1', JSON.stringify(list));
+            } catch (e) {}
+
+            const box = document.getElementById('diagResultBox');
+            box.style.display = 'block';
+            box.innerHTML = `
+                <h2>📜 Свиток Диагностики: ${name1} и ${name2}</h2>
+                <p><strong>👨 ${name1} (${b1}):</strong> Знак Зодиака — <b>${z1}</b>, Год — <b>${an1}</b>, Число дня — <b>${num1}</b>, Группа крови — <b>${blood1}-я</b>.</p>
+                <p><strong>👩 ${name2} (${b2}):</strong> Знак Зодиака — <b>${z2}</b>, Год — <b>${an2}</b>, Число дня — <b>${num2}</b>, Группа крови — <b>${blood2}-я</b>.</p>
+                <hr style="border:0; border-top:1px dashed #8b5a2b; margin:12px 0;">
+                <p><strong>1. Энергетика Характера и Чисел:</strong> ${charSummary}</p>
+                <p><strong>2. Созвучие по Группе Крови:</strong> ${bloodHarmony}</p>
+                <p><strong>3. Годовой и Зодиакальный вектор:</strong> Сочетание «${z1} (${an1})» и «${z2} (${an2})» сохранено в летописи для детального разбора по 14 уровням Волшебной Книги.</p>
+                <p style="color:#1f5c33; font-weight:bold; margin-top:14px;">✅ Запись успешно помещена в Сундук (Архив диагностик у Озера)!</p>
+            `;
+        }
+    </script>
+</body>
+</html>

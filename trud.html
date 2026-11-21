@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабинет труда — «Терпение и труд всё перетрут»</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #2e190a 0%, #0e0804 100%);
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #2b1708;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .parchment-window {
+            width: min(1040px, 96vw);
+            height: 94vh;
+            overflow-y: auto;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 249, 232, 0.99) 0%, rgba(240, 220, 182, 0.99) 65%, rgba(215, 184, 134, 1) 100%);
+            border: 5px solid #5c3512;
+            outline: 2px solid #d4af37;
+            border-radius: 16px;
+            box-shadow:
+                inset 0 0 45px rgba(95, 52, 16, 0.45),
+                0 20px 60px rgba(0, 0, 0, 0.95);
+            padding: 20px 32px;
+            position: relative;
+        }
+        .parchment-window::-webkit-scrollbar { width: 10px; }
+        .parchment-window::-webkit-scrollbar-track { background: rgba(139, 90, 43, 0.18); border-radius: 6px; }
+        .parchment-window::-webkit-scrollbar-thumb { background: #7a461d; border-radius: 6px; border: 1px solid #d4af37; }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+            border-bottom: 2px dashed rgba(110, 65, 25, 0.45);
+        }
+
+        .status-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .pill {
+            background: #2b1708;
+            color: #ffe599;
+            border: 1.5px solid #d4af37;
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-size: 14.5px;
+        }
+        .pill b { color: #ffd700; }
+
+        .close-btn {
+            background: linear-gradient(180deg, #8b1e0b 0%, #520f04 100%);
+            color: #ffe599;
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 26px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        }
+        .close-btn:hover {
+            background: linear-gradient(180deg, #a8240d 0%, #6e1506 100%);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .header-banner {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+        .header-banner h1 {
+            margin: 0;
+            font-size: 28px;
+            color: #5a1807;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        .header-banner .motto {
+            font-size: 18px;
+            font-style: italic;
+            color: #7a461d;
+            margin-top: 4px;
+        }
+
+        .grid-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 820px) {
+            .grid-sections { grid-template-columns: 1fr; }
+        }
+
+        .card-box {
+            background: rgba(255, 252, 242, 0.72);
+            border: 2px solid #8b5a2b;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+        .card-box.full-width {
+            grid-column: 1 / -1;
+        }
+        .card-box h2 {
+            margin: 0 0 10px 0;
+            font-size: 20px;
+            color: #691b09;
+            border-bottom: 1px solid rgba(139, 90, 43, 0.35);
+            padding-bottom: 6px;
+        }
+        .card-box p {
+            font-size: 15.5px;
+            line-height: 1.5;
+            margin: 0 0 12px 0;
+        }
+
+        /* Сетка календаря 30 дней */
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin: 14px 0;
+        }
+        .day-cell {
+            background: rgba(222, 198, 155, 0.55);
+            border: 1.5px solid #8b5a2b;
+            border-radius: 8px;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            color: #4a2c11;
+            position: relative;
+        }
+        .day-cell.visited {
+            background: linear-gradient(180deg, #d4af37 0%, #aa7c11 100%);
+            color: #1c0f06;
+            border-color: #5a3208;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .day-cell.target-22 {
+            outline: 2px dashed #8b1e0b;
+        }
+
+        .action-btn {
+            background: linear-gradient(180deg, #5c3512 0%, #361e09 100%);
+            color: #ffd700;
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            background: linear-gradient(180deg, #78471a 0%, #4a2a0d 100%);
+            color: #fff;
+        }
+
+        .ref-input-group {
+            display: flex;
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .ref-input-group input {
+            flex: 1;
+            padding: 9px 12px;
+            font-family: 'Georgia', serif;
+            font-size: 14.5px;
+            border: 2px solid #8b5a2b;
+            border-radius: 8px;
+            background: #fffdf7;
+            color: #2b1708;
+        }
+
+        textarea.idea-input {
+            width: 100%;
+            min-height: 105px;
+            padding: 12px;
+            font-family: 'Georgia', serif;
+            font-size: 15.5px;
+            border: 2px solid #8b5a2b;
+            border-radius: 10px;
+            background: #fffdf7;
+            color: #2b1708;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+        .ai-verdict-box {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 2px solid #6e4119;
+            background: rgba(255, 243, 205, 0.9);
+            font-size: 15.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="parchment-window">
+        <div class="top-bar">
+            <div class="status-pills">
+                <div class="pill" id="trudBankPill">🏦 Счёт в Банке: <b>800</b> мон.</div>
+                <div class="pill" id="trudCashPill">👛 Наличные: <b>0</b> мон.</div>
+                <div class="pill" id="trudPrivPill">⭐ Статус: <b>Ударник (скидки 50% / 90%)</b></div>
+            </div>
+            <button class="close-btn" onclick="closeTrud()">ЗАКРЫТЬ</button>
+        </div>
+
+        <div class="header-banner">
+            <h1>⚒ Кабинет труда</h1>
+            <div class="motto">«Терпение и труд всё перетрут»</div>
+        </div>
+
+        <div class="grid-sections">
+            <!-- БЛОК 1: ТАБЕЛЬ СЛУЖБЫ (22 ДНЯ ИЗ 30) -->
+            <div class="card-box">
+                <h2>📅 Табель служивой зарплаты (22 из 30 дней)</h2>
+                <p>
+                    Заходите на сайт минимум <b>22 дня в месяц</b>, чтобы в последний день месяца получить на свой счёт в Банке полную служивую зарплату <b>800 монет</b> и льготы на весь следующий месяц: <b>скидку 50%</b> на Диагностику и <b>90%</b> на беседу с Бабой-Ягой!
+                </p>
+                <p style="font-size:14px; color:#5a3818;">
+                    <i>Если посещений меньше 22 дней — в конце месяца начисляется по 5 монет за каждый день выхода.</i>
+                </p>
+
+                <div id="attendanceSummary" style="font-weight:bold; font-size:16px; color:#8b1e0b; margin: 8px 0;">
+                    Отработано дней в этом месяце: 1 из 22
+                </div>
+
+                <div class="days-grid" id="daysGrid"></div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                    <button class="action-btn" onclick="simulateExtraDay()" title="Для проверки работы табеля">
+                        + Симулировать ещё 1 день (Тест)
+                    </button>
+                    <button class="action-btn" onclick="triggerMonthEndSettlement()" title="Проверка выплаты в последний день месяца">
+                        💰 Расчёт в последний день месяца
+                    </button>
+                </div>
+            </div>
+
+            <!-- БЛОК 2: ПРИГЛАШЕНИЕ ДРУЗЕЙ (+50 МОНЕТ В БАНК) -->
+            <div class="card-box">
+                <h2>🤝 Приглашение людей (+50 монет за человека)</h2>
+                <p>
+                    Берите свою личную грамоту-ссылку и приглашайте друзей в Горницу. За каждого приведённого человека на ваш банковский счёт зачисляется <b>50 монет</b>!
+                </p>
+                <p style="font-size:14px; color:#5a3818;">
+                    Чем больше людей в нашем сказочном краю, тем быстрее найдётся ваша истинная родная половинка по всем уровням биополей и цвету крови.
+                </p>
+
+                <div class="ref-input-group">
+                    <input type="text" id="refLinkInput" readonly value="">
+                    <button class="action-btn" onclick="copyRefLink()">Скопировать</button>
+                </div>
+
+                <div style="margin: 14px 0; padding: 10px 12px; background: rgba(139,90,43,0.12); border-radius: 8px; font-size: 15px;">
+                    Приведено людей по вашей ссылке: <b id="refCountText">0</b> чел.<br>
+                    Заработано в Банк по рефералам: <b id="refEarnedText">0</b> монет.
+                </div>
+
+                <button class="action-btn" onclick="simulateReferralJoin()">
+                    🎯 Симулировать приход друга по ссылке (+50 монет в Банк)
+                </button>
+            </div>
+
+            <!-- БЛОК 3: КОНСТРУКТИВНЫЕ ПРЕДЛОЖЕНИЯ С ОЦЕНКОЙ ИИ (0 / 10 / 50 МОНЕТ) -->
+            <div class="card-box full-width">
+                <h2>📜 Книга предложений по улучшению сайта (Оценка ИИ: до 50 монет)</h2>
+                <p>
+                    Напишите конструктивное предложение по развитию Горницы, Райцентра, игр или поиска вторых половинок. ИИ-ревизор мгновенно проверит ваш текст, чтобы отсеять пустую чепуху ради наживы:
+                    <br>• <b>Интересное и детальное предложение</b> — премия <b>50 монет</b> на ваш счёт в Банке.
+                    <br>• <b>Слабое или краткое предложение</b> — поощрение <b>10 монет</b> в Банк.
+                    <br>• <b>Чепуха / набор букв</b> — <b>0 монет</b> (не оплачивается). Все толковые мысли сразу передаются на страницу Админа!
+                </p>
+
+                <textarea class="idea-input" id="ideaTextarea" placeholder="Опишите вашу идею: что улучшить на сайте, какую деталь добавить в локации или как сделать поиск вторых половинок ещё удобнее..."></textarea>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <button class="action-btn" onclick="submitIdeaToAI()">✒ Отправить предложение на оценку ИИ</button>
+                    <span style="font-size:14px; color:#5a3818;">Все начисления поступают на ваш счёт в Банке (обналичить в кошелёк можно в Банке на Площади).</span>
+                </div>
+
+                <div class="ai-verdict-box" id="aiVerdictBox"></div>
+            </div>
+        </div>
+
+        <div class="top-bar" style="margin-top: 22px; margin-bottom: 0; border-bottom: none; border-top: 2px dashed rgba(110, 65, 25, 0.45); padding-top: 14px; justify-content: flex-end;">
+            <button class="close-btn" onclick="closeTrud()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <!-- Подключаем Модуль 1 -->
+    <script src="wallet.js"></script>
+    <script>
+        function renderTrudUI() {
+            const st = GornitsaWallet.state;
+            document.getElementById('trudBankPill').innerHTML = `🏦 Счёт в Банке: <b>${st.bankBalance}</b> мон.`;
+            const purseStatus = st.walletTaken ? `${st.cashBalance} мон. (с собой)` : `${st.cashBalance} мон. (забыт в Горнице)`;
+            document.getElementById('trudCashPill').innerHTML = `👛 Кошелёк: <b>${purseStatus}</b>`;
+            document.getElementById('trudPrivPill').innerHTML = st.udarnikPrivilege
+                ? `⭐ Льготы: <b>Скидка 50% Диагностика / 90% Яга</b>`
+                : `⭐ Льготы: <b>Нет (нужно 22 дня)</b>`;
+
+            // Табель
+            const daysVisited = st.visitedDays.length;
+            const summaryEl = document.getElementById('attendanceSummary');
+            if (daysVisited >= 22) {
+                summaryEl.style.color = '#1b5e20';
+                summaryEl.innerHTML = `✔ Норма выполнена! Посещений: ${daysVisited} из 30 (Гарантировано 800 монет + скидки 50%/90%)`;
+            } else {
+                summaryEl.style.color = '#8b1e0b';
+                summaryEl.innerHTML = `Отработано дней: ${daysVisited} из 22 (Текущий расчёт: ${daysVisited * 5} мон., до полной зарплаты 800 мон. осталось ${22 - daysVisited} дн.)`;
+            }
+
+            const grid = document.getElementById('daysGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 30; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'day-cell' + (i <= daysVisited ? ' visited' : '') + (i === 22 ? ' target-22' : '');
+                cell.innerHTML = i <= daysVisited ? `День ${i}<br>💮` : `День ${i}`;
+                if (i === 22) cell.title = 'Рубеж 22 дня: Полная зарплата 800 монет и скидки!';
+                grid.appendChild(cell);
+            }
+
+            // Реферальная ссылка
+            const baseUrl = window.location.origin && window.location.origin !== 'null'
+                ? window.location.origin
+                : 'https://volshebnaya-kniga.site';
+            document.getElementById('refLinkInput').value = `${baseUrl}/?ref=${st.refCode}`;
+            document.getElementById('refCountText').textContent = st.referralsCount;
+            document.getElementById('refEarnedText').textContent = st.referralsCount * 50;
+        }
+
+        function simulateExtraDay() {
+            const st = GornitsaWallet.state;
+            if (st.visitedDays.length >= 30) {
+                alert('В этом месяце уже отмечены все 30 дней!');
+                return;
+            }
+            const fakeDate = `2026-11-sim-${st.visitedDays.length + 1}`;
+            st.visitedDays.push(fakeDate);
+            GornitsaWallet.save();
+            renderTrudUI();
+        }
+
+        function triggerMonthEndSettlement() {
+            const res = GornitsaWallet.settleCurrentMonthNow();
+            alert(`РАСЧЁТ В ПОСЛЕДНИЙ ДЕНЬ МЕСЯЦА:
+
+Посещено дней: ${res.daysCount}
+Начислено на счёт в Банке: +${res.payout} монет!
+Статус ударника (скидки 50% и 90%): ${res.udarnik ? 'АКТИВЕН' : 'НЕ НАБРАНО 22 ДНЯ'}`);
+            renderTrudUI();
+        }
+
+        function copyRefLink() {
+            const inp = document.getElementById('refLinkInput');
+            inp.select();
+            document.execCommand('copy');
+            alert('Ваша реферальная ссылка скопирована! Отправьте её друзьям.');
+        }
+
+        function simulateReferralJoin() {
+            GornitsaWallet.state.referralsCount += 1;
+            GornitsaWallet.earnToBank(50, `Бонус за приведённого пользователя по ссылке (${GornitsaWallet.state.refCode})`);
+            renderTrudUI();
+            alert('По вашей ссылке зарегистрировался новый гость! На ваш счёт в Банке зачислено +50 монет.');
+        }
+
+        // Умный ИИ-анализатор предложений (0 / 10 / 50 монет)
+        function evaluateSuggestionWithAI(text) {
+            const clean = text.trim();
+            if (clean.length < 15) {
+                return {
+                    score: 0,
+                    grade: 'Чепуха / Слишком коротко',
+                    comment: 'Текст слишком короткий и не содержит конкретного предложения. Оплата не начисляется.'
+                };
+            }
+
+            // Проверка на однообразный повтор символов (например "ааааааааааааа")
+            const uniqueChars = new Set(clean.toLowerCase().replace(/\s+/g, '')).size;
+            if (uniqueChars < 6) {
+                return {
+                    score: 0,
+                    grade: 'Чепуха / Набор символов',
+                    comment: 'ИИ распознал бессмысленный набор повторяющихся букв. Оплата: 0 монет.'
+                };
+            }
+
+            const words = clean.split(/\s+/).filter(w => w.length > 1);
+            if (words.length < 5) {
+                return {
+                    score: 0,
+                    grade: 'Неконструктивно',
+                    comment: 'Сформулируйте мысль хотя бы в нескольких связных предложениях.'
+                };
+            }
+
+            // Ключевые слова конструктивных идей по проекту
+            const constructiveKeywords = [
+                'сайт', 'горниц', 'книг', 'диагностик', 'половинк', 'яга', 'баба', 'шашк',
+                'банк', 'сундук', 'справочн', 'площад', 'озер', 'кнопк', 'дизайн', 'музык',
+                'анкет', 'поиск', 'пар', 'монет', 'кошел', 'цыган', 'детектив', 'удобн',
+                'добав', 'сделат', 'улучш', 'исправ', 'экран', 'меню', 'чат', 'игр'
+            ];
+
+            let keywordHits = 0;
+            const lower = clean.toLowerCase();
+            constructiveKeywords.forEach(kw => {
+                if (lower.includes(kw)) keywordHits++;
+            });
+
+            if (words.length >= 14 && keywordHits >= 2) {
+                return {
+                    score: 50,
+                    grade: 'Интересное конструктивное предложение!',
+                    comment: 'ИИ высоко оценил вашу идею! Предложение передано на страницу Админа, а на ваш счёт в Банке зачислено +50 монет.'
+                };
+            }
+
+            if (words.length >= 6) {
+                return {
+                    score: 10,
+                    grade: 'Слабое / краткое предложение',
+                    comment: 'Мысль понятна, но описана кратко без деталей реализации. Предложение отправлено Админу, поощрение: +10 монет в Банк.'
+                };
+            }
+
+            return {
+                score: 0,
+                grade: 'Чепуха',
+                comment: 'ИИ не обнаружил полезного предложения по улучшению сайта.'
+            };
+        }
+
+        function submitIdeaToAI() {
+            const textarea = document.getElementById('ideaTextarea');
+            const box = document.getElementById('aiVerdictBox');
+            const text = textarea.value;
+
+            const result = evaluateSuggestionWithAI(text);
+            box.style.display = 'block';
+
+            if (result.score > 0) {
+                GornitsaWallet.earnToBank(result.score, `Оплата за предложение в Кабинете труда (${result.grade})`);
+                GornitsaWallet.state.adminSuggestions.unshift({
+                    id: Date.now(),
+                    date: new Date().toLocaleString('ru-RU'),
+                    text: text.trim(),
+                    aiGrade: result.grade,
+                    reward: result.score
+                });
+                GornitsaWallet.save();
+                textarea.value = '';
+                box.style.borderColor = '#2e7d32';
+            } else {
+                box.style.borderColor = '#8b1e0b';
+            }
+
+            box.innerHTML = `
+                <div style="font-weight:bold; font-size:17px; margin-bottom:4px;">
+                    🤖 Вердикт ИИ: ${result.grade} (Начислено: ${result.score} монет)
+                </div>
+                <div>${result.comment}</div>
+            `;
+
+            renderTrudUI();
+        }
+
+        function closeTrud() {
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = 'index.html?loc=trud';
+            }
+        }
+
+        renderTrudUI();
+    </script>
+</body>
+</html>

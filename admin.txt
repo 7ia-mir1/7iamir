@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Приказная Палата Администратора — Управление проектом</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #1f140d 0%, #090503 100%);
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #2b1708;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .admin-scroll {
+            width: min(1100px, 96vw);
+            height: 94vh;
+            overflow-y: auto;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 250, 236, 0.99) 0%, rgba(238, 217, 178, 0.99) 65%, rgba(212, 180, 128, 1) 100%);
+            border: 5px solid #4a280b;
+            outline: 2px solid #d4af37;
+            border-radius: 16px;
+            box-shadow:
+                inset 0 0 45px rgba(95, 52, 16, 0.45),
+                0 20px 60px rgba(0, 0, 0, 0.95);
+            padding: 20px 32px;
+        }
+        .admin-scroll::-webkit-scrollbar { width: 10px; }
+        .admin-scroll::-webkit-scrollbar-track { background: rgba(139, 90, 43, 0.18); border-radius: 6px; }
+        .admin-scroll::-webkit-scrollbar-thumb { background: #7a461d; border-radius: 6px; border: 1px solid #d4af37; }
+
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 2px dashed rgba(110, 65, 25, 0.45);
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+
+        .close-btn {
+            background: linear-gradient(180deg, #8b1e0b 0%, #520f04 100%);
+            color: #ffe599;
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 24px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .close-btn:hover { color: #fff; }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 800px) {
+            .stats-bar { grid-template-columns: 1fr 1fr; }
+        }
+        .stat-card {
+            background: #2b1708;
+            color: #ffe599;
+            border: 2px solid #d4af37;
+            border-radius: 12px;
+            padding: 12px 16px;
+            text-align: center;
+        }
+        .stat-card .val {
+            font-size: 26px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-top: 4px;
+        }
+
+        .tabs-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            flex: 1;
+            min-width: 200px;
+            padding: 11px 16px;
+            font-family: 'Georgia', serif;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid #6e4119;
+            border-radius: 10px;
+            background: rgba(215, 184, 134, 0.6);
+            color: #4a280b;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: linear-gradient(180deg, #5c3512 0%, #361e09 100%);
+            color: #ffd700;
+            border-color: #d4af37;
+        }
+
+        .admin-panel {
+            display: none;
+            background: rgba(255, 252, 242, 0.82);
+            border: 2px solid #8b5a2b;
+            border-radius: 14px;
+            padding: 20px;
+        }
+        .admin-panel.active { display: block; }
+
+        .item-card {
+            background: #fffdf7;
+            border: 2px solid #8b5a2b;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        .action-btn {
+            background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
+            color: #fff;
+            border: 1.5px solid #d4af37;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .action-btn.danger {
+            background: linear-gradient(180deg, #8b1e0b 0%, #520f04 100%);
+            color: #ffe599;
+        }
+        .action-btn.gold {
+            background: linear-gradient(180deg, #5c3512 0%, #361e09 100%);
+            color: #ffd700;
+        }
+
+        .pair-match-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 14px;
+            align-items: center;
+            background: rgba(46, 125, 50, 0.1);
+            border: 2px solid #2e7d32;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        @media (max-width: 720px) {
+            .pair-match-grid { grid-template-columns: 1fr; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-scroll">
+        <div class="top-row">
+            <div>
+                <h1 style="margin:0; font-size:26px; color:#5a1807;">👑 Приказная Палата Администратора</h1>
+                <div style="font-size:14.5px; color:#5a3818; margin-top:3px;">
+                    Управление идеями из Кабинета труда, анкетами Детектива, совпавшими парами и казной
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeAdmin()">ЗАКРЫТЬ</button>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div>💡 Предложений от гостей</div>
+                <div class="val" id="statIdeasCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div>🕵️‍♂️ Анкет в картотеке</div>
+                <div class="val" id="statProfilesCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div>💚 Совпавших пар (100%)</div>
+                <div class="val" id="statMatchesCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div>🏦 Баланс текущего игрока</div>
+                <div class="val" id="statUserBank">800 мон.</div>
+            </div>
+        </div>
+
+        <div class="tabs-row">
+            <button class="tab-btn active" id="admTabMedia" onclick="switchAdminTab('media')">
+                🎵 Медиатека и Загрузка (Граммофон, Баюн, Зеркало)
+            </button>
+            <button class="tab-btn" id="admTabIdeas" onclick="switchAdminTab('ideas')">
+                📜 Предложения из Кабинета труда
+            </button>
+            <button class="tab-btn" id="admTabPairs" onclick="switchAdminTab('pairs')">
+                💚 Картотека Детектива и Пары
+            </button>
+            <button class="tab-btn" id="admTabTreasury" onclick="switchAdminTab('treasury')">
+                ⚙ Управление казной и Тесты
+            </button>
+        </div>
+
+        <!-- ВКЛАДКА 0: МЕДИАТЕКА И ЗАГРУЗКА ФАЙЛОВ (ГРАММОФОН, КОТ БАЮН, ЗЕРКАЛО, КИНОТЕАТР) -->
+        <div class="admin-panel active" id="panelMedia">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <h2 style="margin:0; color:#5a1807;">🎵 Управление медиафайлами и настройка каждого устройства</h2>
+                    <div style="font-size:14.5px; color:#5a3818; margin-top:4px;">
+                        Нажмите на нужное устройство ниже, чтобы развернуть его настройки: загрузить файл с компьютера или ссылку YouTube/MP4, отрегулировать звук, поменять очерёдность (⬆/⬇) или временно закрыть надоевшие записи (👁/🙈).
+                    </div>
+                </div>
+            </div>
+
+            <div id="adminMediaCategoriesContainer"></div>
+        </div>
+
+        <!-- ВКЛАДКА 1: ПРЕДЛОЖЕНИЯ ПО УЛУЧШЕНИЮ САЙТА -->
+        <div class="admin-panel" id="panelIdeas">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <h2 style="margin:0; color:#5a1807;">📜 Предложения гостей, прошедшие фильтр ИИ</h2>
+                <button class="action-btn gold" onclick="addDemoSuggestion()">+ Добавить тестовое предложение</button>
+            </div>
+            <div id="ideasContainer"></div>
+        </div>
+
+        <!-- ВКЛАДКА 2: КАРТОТЕКА ДЕТЕКТИВА И СОВПАВШИЕ ПАРЫ -->
+        <div class="admin-panel" id="panelPairs">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <h2 style="margin:0; color:#5a1807;">💚 Розыск половинок и найденные пары («Зелёный свет»)</h2>
+                <button class="action-btn" onclick="generateMatchingCandidate()">✨ Создать тестовую пару с 100% совпадением</button>
+            </div>
+            <p style="font-size:15px; margin-top:0;">
+                Первым соединившимся парам вы можете открыть контакты <b>бесплатно</b> (для создания историй успеха), а для последующих пар — включать статус ожидания оплаты за открытие контактов.
+            </p>
+            <div id="matchesContainer"></div>
+        </div>
+
+        <!-- ВКЛАДКА 3: УПРАВЛЕНИЕ КАЗНОЙ И СБРОС ДАННЫХ -->
+        <div class="admin-panel" id="panelTreasury">
+            <h2 style="margin-top:0; color:#5a1807;">⚙ Ручное управление казной и статусами игрока</h2>
+            <p style="font-size:15.5px;">
+                Здесь вы можете вручную начислить монеты в Банк или в наличный Кошелёк, переключить статус мешочка на столе в Горнице или сбросить память для проверки с чистого листа.
+            </p>
+
+            <div class="item-card" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <b>Быстрое начисление в Банк:</b>
+                <button class="action-btn" onclick="adminAddBank(500)">+500 монет в Банк</button>
+                <button class="action-btn" onclick="adminAddBank(1000)">+1000 монет в Банк</button>
+                <button class="action-btn gold" onclick="adminTogglePurse()">👛 Переключить статус: Мешочек взят / на столе</button>
+            </div>
+
+            <div class="item-card" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <b>Управление льготой Ударника (50% Диагностика / 90% Баба-Яга):</b>
+                <button class="action-btn" onclick="adminSetUdarnik(true)">Включить льготу Ударника</button>
+                <button class="action-btn danger" onclick="adminSetUdarnik(false)">Отключить льготу Ударника</button>
+            </div>
+
+            <div class="item-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-color:#8b1e0b;">
+                <div>
+                    <b style="color:#8b1e0b;">Полный сброс тестовых данных:</b><br>
+                    <span style="font-size:14px;">Возвращает баланс к стартовым 800 монетам в Банке и очищает историю.</span>
+                </div>
+                <button class="action-btn danger" onclick="adminResetAll()">🔄 Сбросить всё к началу (800 монет)</button>
+            </div>
+        </div>
+
+        <div class="top-row" style="margin-top: 20px; margin-bottom: 0; border-bottom: none; border-top: 2px dashed rgba(110, 65, 25, 0.45); padding-top: 14px; justify-content: flex-end;">
+            <button class="close-btn" onclick="closeAdmin()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <script src="wallet.js"></script>
+    <script src="media.js"></script>
+    <script>
+        const PROFILE_KEY = 'GORNITSA_DETECTIVE_PROFILE_V1';
+        const MATCHES_KEY = 'GORNITSA_ADMIN_MATCHES_V1';
+
+        const expandedMediaCats = {
+            gramophone: true,
+            bayun: false,
+            mirror: false,
+            cinema: false
+        };
+
+        function switchAdminTab(tab) {
+            document.getElementById('admTabMedia').classList.toggle('active', tab === 'media');
+            document.getElementById('admTabIdeas').classList.toggle('active', tab === 'ideas');
+            document.getElementById('admTabPairs').classList.toggle('active', tab === 'pairs');
+            document.getElementById('admTabTreasury').classList.toggle('active', tab === 'treasury');
+
+            document.getElementById('panelMedia').classList.toggle('active', tab === 'media');
+            document.getElementById('panelIdeas').classList.toggle('active', tab === 'ideas');
+            document.getElementById('panelPairs').classList.toggle('active', tab === 'pairs');
+            document.getElementById('panelTreasury').classList.toggle('active', tab === 'treasury');
+        }
+
+        function toggleAdminMediaAccordion(cat) {
+            expandedMediaCats[cat] = !expandedMediaCats[cat];
+            renderAdminMediaSection();
+        }
+
+        function renderAdminMediaSection() {
+            const container = document.getElementById('adminMediaCategoriesContainer');
+            if (!container || !window.GornitsaMedia) return;
+
+            const categories = [
+                { key: 'gramophone', icon: '📻', name: 'Граммофон — Музыка', desc: 'Инструментальные мелодии в Горнице' },
+                { key: 'bayun', icon: '🐈', name: 'Кот Баюн — Песни', desc: 'Песни, баллады и сказки Кота Баюна' },
+                { key: 'mirror', icon: '🪞', name: 'Волшебное зеркало — Клипы', desc: 'Видеоклипы в Горнице (открываются в окне с кнопкой «На весь экран»)' },
+                { key: 'cinema', icon: '🎬', name: 'Кинотеатр «Иллюзионъ» — Видео', desc: 'Фильмы и видеоролики в Кинотеатре на Площади' }
+            ];
+
+            container.innerHTML = '';
+
+            categories.forEach(cat => {
+                const list = GornitsaMedia.library[cat.key] || [];
+                const activeCount = list.filter(x => !x.disabled).length;
+                const vol = GornitsaMedia.getVolume(cat.key);
+                const isOpen = Boolean(expandedMediaCats[cat.key]);
+
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.style.marginBottom = '14px';
+
+                let itemsHTML = '';
+                if (list.length === 0) {
+                    itemsHTML = `<div style="padding:12px; text-align:center; color:#6a4928;">Список пуст. Загрузите файл или добавьте ссылку выше.</div>`;
+                } else {
+                    list.forEach((item, idx) => {
+                        const srcBadge = item.source === 'builtin'
+                            ? '🎻 Встроенная'
+                            : (item.source === 'youtube' ? '🎬 YouTube (в окне)' : (item.url && item.url.startsWith('indexeddb:') ? '📂 Загружен с ПК' : '🎞 MP4/Сервер'));
+                        itemsHTML += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; background:${item.disabled ? 'rgba(139,30,11,0.08)' : 'rgba(139,90,43,0.1)'}; border:1px solid ${item.disabled ? '#c62828' : '#8b5a2b'}; margin-bottom:6px; opacity:${item.disabled ? '0.6' : '1'}; flex-wrap:wrap;">
+                                <div style="flex:1; min-width:200px;">
+                                    <div style="font-weight:bold; font-size:15px; color:#2b1708; text-decoration:${item.disabled ? 'line-through' : 'none'};">
+                                        ${idx + 1}.${item.title}
+                                    </div>
+                                    <div style="font-size:12.5px; color:#6a4928; margin-top:2px;">
+                                        Источник: <b>${srcBadge}</b>${item.disabled ? '• <span style="color:#8b1e0b; font-weight:bold;">Временно закрыт (пропускается)</span>' : '• <span style="color:#1b5e20; font-weight:bold;">Активен</span>'}
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                    <button class="action-btn gold" title="Переместить выше" ${idx === 0 ? 'disabled style="opacity:0.4;cursor:default;"' : ''} onclick="adminMoveMedia('${cat.key}',${idx}, -1)">⬆ Выше</button>
+                                    <button class="action-btn gold" title="Переместить ниже" ${idx === list.length - 1 ? 'disabled style="opacity:0.4;cursor:default;"' : ''} onclick="adminMoveMedia('${cat.key}',${idx}, 1)">⬇ Ниже</button>
+                                    <button class="action-btn ${item.disabled ? 'danger' : ''}" title="Временно закрыть / включить файл" onclick="adminToggleDisableMedia('${cat.key}',${idx})">
+                                        ${item.disabled ? '🙈 Временно закрыт (Включить)' : '👁 Активен (Закрыть временно)'}
+                                    </button>
+                                    <button class="action-btn" title="Проверить проигрывание в окне" onclick="GornitsaMedia.openPlayerModal('${cat.key}',${idx})">▶ Открыть в окне</button>
+                                    <button class="action-btn danger" title="Удалить навсегда" onclick="adminDeleteMedia('${cat.key}',${idx})">🗑</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                card.innerHTML = `
+                    <div onclick="toggleAdminMediaAccordion('${cat.key}')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <div style="font-size:19px; font-weight:bold; color:#5a1807;">
+                                ${cat.icon}${cat.name}
+                            </div>
+                            <div style="font-size:13.5px; color:#5a3818; margin-top:2px;">
+                                ${cat.desc} • Активных файлов: <b>${activeCount} из ${list.length}</b> • Громкость: <b>${vol}%</b>
+                            </div>
+                        </div>
+                        <button class="action-btn gold" type="button" style="pointer-events:none;">
+                            ⚙ ${isOpen ? 'Свернуть настройки ▲' : 'Развернуть настройки ▼'}
+                        </button>
+                    </div>
+
+                    <div style="display:${isOpen ? 'block' : 'none'}; margin-top:14px; padding-top:14px; border-top:2px dashed rgba(139,90,43,0.4);">
+                        <!-- Блок 1: Регулировка звука -->
+                        <div style="display:flex; align-items:center; gap:14px; background:rgba(139,90,43,0.12); padding:10px 14px; border-radius:10px; border:1px solid #8b5a2b; margin-bottom:14px; flex-wrap:wrap;">
+                            <b style="color:#5a1807;">🔊 Регулировка звука (${cat.name}):</b>
+                            <input type="range" min="0" max="100" value="${vol}" style="flex:1; min-width:160px; max-width:320px; accent-color:#5a1807; cursor:pointer;"
+                                oninput="adminChangeVolume('${cat.key}', this.value, 'admVolLbl_${cat.key}')">
+                            <span id="admVolLbl_${cat.key}" style="font-weight:bold; font-size:16px; color:#8b1e0b; min-width:45px;">${vol}%</span>
+                            <button class="action-btn" onclick="GornitsaMedia.openPlayerModal('${cat.key}', 0)">▶ Проверить плеер в окне</button>
+                        </div>
+
+                        <!-- Блок 2: Загрузка медиафайла с ПК или по ссылке YouTube / MP4 -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px;">
+                            <div style="background:#f9f1e1; border:1.5px solid #8b5a2b; border-radius:10px; padding:12px;">
+                                <div style="font-weight:bold; color:#5a1807; margin-bottom:8px;">📂 Вариант А: Загрузить файл с компьютера (.mp3 / .mp4)</div>
+                                <input type="text" id="fileTitle_${cat.key}" placeholder="Название (необязательно)" style="width:100%; padding:7px 10px; margin-bottom:8px; border:1px solid #8b5a2b; border-radius:6px; font-family:'Georgia',serif;">
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input type="file" id="fileInput_${cat.key}" accept="audio/*,video/*" style="flex:1; font-size:13px;">
+                                    <button class="action-btn" onclick="adminUploadLocalFile('${cat.key}')">📥 Загрузить в список</button>
+                                </div>
+                            </div>
+
+                            <div style="background:#f9f1e1; border:1.5px solid #8b5a2b; border-radius:10px; padding:12px;">
+                                <div style="font-weight:bold; color:#5a1807; margin-bottom:8px;">🔗 Вариант Б: Добавить ссылку (YouTube или прямой .mp4 / .mp3)</div>
+                                <input type="text" id="urlTitle_${cat.key}" placeholder="Название мелодии / песни / клипа" style="width:100%; padding:7px 10px; margin-bottom:6px; border:1px solid #8b5a2b; border-radius:6px; font-family:'Georgia',serif;">
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input type="text" id="urlInput_${cat.key}" placeholder="https://www.youtube.com/watch?v=... или файл.mp4" style="flex:1; padding:7px 10px; border:1px solid #8b5a2b; border-radius:6px; font-family:'Georgia',serif;">
+                                    <button class="action-btn" onclick="adminAddMediaUrl('${cat.key}')">+ Добавить</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Блок 3: Список файлов с перемещением очерёдности и временным отключением -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <b style="color:#5a1807;">📜 Очерёдность проигрывания файлов (перемещайте ⬆/⬇ или закрывайте временно):</b>
+                            <button class="action-btn gold" style="font-size:12px; padding:4px 10px;" onclick="adminResetCategory('${cat.key}')">↺ Вернуть стандартный список</button>
+                        </div>
+                        <div>${itemsHTML}</div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function adminChangeVolume(cat, val, labelId) {
+            GornitsaMedia.setVolume(cat, val);
+            const el = document.getElementById(labelId);
+            if (el) el.textContent = Math.round(val) + '%';
+        }
+
+        async function adminUploadLocalFile(cat) {
+            const fileInp = document.getElementById('fileInput_' + cat);
+            const titleInp = document.getElementById('fileTitle_' + cat);
+            const file = fileInp && fileInp.files && fileInp.files[0];
+            if (!file) {
+                alert('Сначала выберите аудио- или видеофайл на компьютере!');
+                return;
+            }
+            const customTitle = titleInp ? titleInp.value.trim() : '';
+            await GornitsaMedia.addUploadedFile(cat, file, customTitle);
+            if (fileInp) fileInp.value = '';
+            if (titleInp) titleInp.value = '';
+            renderAdminMediaSection();
+            alert(`Файл «${customTitle \vert{}\vert{} file.name}» успешно загружен и сохранён!`); }  function adminAddMediaUrl(cat) { const titleInp = document.getElementById('urlTitle_' + cat); const urlInp = document.getElementById('urlInput_' + cat); const url = urlInp ? urlInp.value.trim() : ''; if (!url) { alert('Укажите ссылку на видеоклип YouTube или файл MP4/MP3!'); return; } const title = (titleInp && titleInp.value.trim()) ? titleInp.value.trim() : 'Новая запись (' + cat + ')'; GornitsaMedia.addItem(cat, title, url); if (titleInp) titleInp.value = ''; if (urlInp) urlInp.value = ''; renderAdminMediaSection(); }  function adminMoveMedia(cat, idx, dir) { GornitsaMedia.moveItem(cat, idx, dir); renderAdminMediaSection(); }  function adminToggleDisableMedia(cat, idx) { GornitsaMedia.toggleItemDisabled(cat, idx); renderAdminMediaSection(); }  // Функция удаления медиафайла для администратора function adminDeleteMedia(cat, idx) { if (!confirm('Вы действительно хотите удалить этот медиафайл из системы?')) return; if (window.GornitsaMedia && typeof GornitsaMedia.removeItem === 'function') { GornitsaMedia.removeItem(cat, idx); renderAdminMediaSection(); } else { alert('Ошибка: модуль GornitsaMedia не обнаружен.'); } }  function adminResetCategory(cat) { if (!confirm('Восстановить стандартный список записей для этого устройства?')) return; GornitsaMedia.resetCategoryToDefault(cat); renderAdminMediaSection(); }  function getSavedMatches() { try { const raw = localStorage.getItem(MATCHES_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }  function saveMatches(arr) { localStorage.setItem(MATCHES_KEY, JSON.stringify(arr)); }  function renderAdminUI() { const st = GornitsaWallet.state; const ideas = st.adminSuggestions \vert{}\vert{} []; const rawProf = localStorage.getItem(PROFILE_KEY); const userProf = rawProf ? JSON.parse(rawProf) : null; const matches = getSavedMatches();  document.getElementById('statIdeasCount').textContent = ideas.length; document.getElementById('statProfilesCount').textContent = (userProf ? 1 : 0) + matches.length; document.getElementById('statMatchesCount').textContent = matches.length; document.getElementById('statUserBank').textContent = `${st.bankBalance} мон.`;
+
+            // 1. Рендер предложений
+            const ideasEl = document.getElementById('ideasContainer');
+            if (ideas.length === 0) {
+                ideasEl.innerHTML = `<div style="padding:18px; text-align:center; color:#6a4928;">Пока нет предложений из Кабинета труда.</div>`;
+            } else {
+                ideasEl.innerHTML = '';
+                ideas.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'item-card';
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                            <span style="font-weight:bold; color:#1b5e20;">🤖 Оценка

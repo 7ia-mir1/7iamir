@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Цыганка на Площади — Агент Детективного Агентства</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #2b0f1c 0%, #0d0509 100%);
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #2b1708;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .gypsy-scroll {
+            width: min(980px, 96vw);
+            height: 94vh;
+            overflow-y: auto;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(255, 248, 232, 0.99) 0%, rgba(238, 212, 172, 0.99) 65%, rgba(208, 172, 120, 1) 100%);
+            border: 5px solid #63233b;
+            outline: 2px solid #d4af37;
+            border-radius: 16px;
+            box-shadow:
+                inset 0 0 45px rgba(99, 35, 59, 0.35),
+                0 20px 60px rgba(0, 0, 0, 0.95);
+            padding: 20px 32px;
+        }
+        .gypsy-scroll::-webkit-scrollbar { width: 10px; }
+        .gypsy-scroll::-webkit-scrollbar-track { background: rgba(139, 90, 43, 0.18); border-radius: 6px; }
+        .gypsy-scroll::-webkit-scrollbar-thumb { background: #63233b; border-radius: 6px; border: 1px solid #d4af37; }
+
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 2px dashed rgba(99, 35, 59, 0.45);
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+
+        .status-pills {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .pill {
+            background: #2b1708;
+            color: #ffe599;
+            border: 1.5px solid #d4af37;
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-size: 14.5px;
+        }
+        .pill b { color: #ffd700; }
+
+        .close-btn {
+            background: linear-gradient(180deg, #8b1e0b 0%, #520f04 100%);
+            color: #ffe599;
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 26px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .close-btn:hover {
+            background: linear-gradient(180deg, #a8240d 0%, #6e1506 100%);
+            color: #fff;
+        }
+
+        .gypsy-stage {
+            background: rgba(255, 252, 244, 0.86);
+            border: 2.5px solid #63233b;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .gypsy-content-layout {
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 740px) {
+            .gypsy-content-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .gypsy-text-col {
+            text-align: left;
+        }
+
+        .gypsy-portrait-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .gypsy-portrait-frame {
+            width: 240px;
+            height: 310px;
+            border: 4px solid #63233b;
+            outline: 2.5px solid #d4af37;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+            background: #2b1409;
+        }
+        .gypsy-portrait-frame canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .gypsy-portrait-caption {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #4a1529;
+            text-align: center;
+        }
+
+        .gypsy-speech {
+            font-size: 18px;
+            font-style: italic;
+            line-height: 1.55;
+            color: #4a1529;
+            margin: 12px 0 20px 0;
+            background: rgba(212, 175, 55, 0.16);
+            border-left: 4px solid #63233b;
+            padding: 14px 20px;
+            border-radius: 8px;
+        }
+
+        .gild-btn {
+            background: linear-gradient(180deg, #d4af37 0%, #9a7411 100%);
+            color: #1c0f06;
+            border: 2.5px solid #4a1529;
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-family: 'Georgia', serif;
+            font-size: 17.5px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .gild-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 26px rgba(212, 175, 55, 0.7);
+        }
+
+        .soulmate-card {
+            display: none;
+            margin-top: 22px;
+            background: linear-gradient(180deg, #fffdf7 0%, #f5e6c8 100%);
+            border: 3px solid #63233b;
+            outline: 2px solid #d4af37;
+            border-radius: 14px;
+            padding: 24px 28px;
+            text-align: left;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            font-size: 17.5px;
+            line-height: 1.65;
+            color: #2b1708;
+        }
+        .soulmate-card p {
+            margin: 0 0 14px 0;
+        }
+        .soulmate-highlight {
+            font-weight: bold;
+            color: #8b1e0b;
+            border-bottom: 1px dashed #8b1e0b;
+            padding: 0 4px;
+        }
+
+        .go-detective-btn {
+            display: inline-block;
+            margin-top: 12px;
+            background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
+            color: #fff;
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 12px 26px;
+            font-family: 'Georgia', serif;
+            font-size: 16.5px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.35);
+        }
+        .go-detective-btn:hover {
+            background: linear-gradient(180deg, #388e3c 0%, #256f29 100%);
+        }
+
+        .second-visit-box {
+            display: none;
+            background: rgba(255, 248, 225, 0.96);
+            border: 3px solid #63233b;
+            outline: 2px solid #d4af37;
+            border-radius: 14px;
+            padding: 28px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 19px;
+            line-height: 1.6;
+            color: #4a1529;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="gypsy-scroll">
+        <div class="top-row">
+            <div>
+                <h1 style="margin:0; font-size:26px; color:#4a1529;">🔮 Цыганка Рада — Тайный агент Сыскного Бюро</h1>
+                <div style="font-size:15px; color:#5a3818; margin-top:3px;">
+                    Позолоти ручку наличными монетами из кошелька — и узнай приметы своей второй половинки!
+                </div>
+            </div>
+            <div class="status-pills">
+                <div class="pill" id="gypCashPill">👛 В кошельке: <b>0</b> мон.</div>
+                <div class="pill" id="gypBankPill">🏦 В Банке: <b>800</b> мон.</div>
+                <button class="close-btn" onclick="closeGypsy()">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+
+        <!-- Табличка, если пользователь пришёл к Цыганке во второй раз -->
+        <div class="second-visit-box" id="secondVisitGypsyBox">
+            <h2 style="margin-top:0; color:#63233b;">🔮 Слово Цыганки уже сказано</h2>
+            <p id="secondVisitGypsyText"></p>
+            <div style="margin-top:18px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button class="go-detective-btn" onclick="window.location.href='detektiv.html'">🕵️‍♂️ Перейти к анкете Детектива</button>
+                <button class="close-btn" onclick="closeGypsy()">Вернуться на Площадь</button>
+            </div>
+        </div>
+
+        <!-- Основное окно первого визита -->
+        <div class="gypsy-stage" id="firstVisitGypsyStage">
+            <div class="gypsy-content-layout">
+                <!-- ЛЕВАЯ КОЛОНКА: ТЕКСТ И ПРЕДСКАЗАНИЕ -->
+                <div class="gypsy-text-col">
+                    <h2 style="margin: 0; color: #4a1529; font-size: 24px;">«Позолоти ручку, дорогой гость, всю правду скажу!»</h2>
+
+                    <div class="gypsy-speech" id="gypsyGreeting">
+                        «Я не просто гадалка на Площади, я — первый агент нашего Сыскного Бюро... Вижу по глазам твоим: ищешь ты свою единственную родную душу. Позолоти ручку монетками из своего мешочка, и я открою тебе заветные приметы твоей половинки и скажу, что делать дальше!»
+                    </div>
+
+                    <button class="gild-btn" id="gildBtn" onclick="gildGypsyHand()">
+                        🪙 Позолотить ручку Цыганке (50 монет наличными)
+                    </button>
+
+                    <!-- ОТКРЫВАЮЩИЙСЯ ВНИЗУ ТЕКСТ ПОСЛЕ ПОЗОЛОЧЕНИЯ РУЧКИ -->
+                    <div class="soulmate-card" id="soulmateCard"></div>
+                </div>
+
+                <!-- ПРАВАЯ КОЛОНКА: ИЗОБРАЖЕНИЕ ЦЫГАНКИ С ПЛОЩАДИ -->
+                <div class="gypsy-portrait-col">
+                    <div class="gypsy-portrait-frame">
+                        <canvas id="gypsyPortraitCanvas" width="240" height="310"></canvas>
+                    </div>
+                    <div class="gypsy-portrait-caption">Цыганка-агент на Площади</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="top-row" style="margin-top: 20px; margin-bottom: 0; border-bottom: none; border-top: 2px dashed rgba(99, 35, 59, 0.45); padding-top: 14px; justify-content: flex-end;">
+            <button class="close-btn" onclick="closeGypsy()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <script src="wallet.js"></script>
+    <script>
+        const GYPSY_VISITED_KEY = 'GORNITSA_GYPSY_VISITED_V1';
+
+        // Текст таблички при втором посещении Цыганки:
+        const CUSTOM_SECOND_VISIT_GYPSY_MESSAGE = "Милый человек, я уже открыла тебе тайну твоей судьбы и назвала приметы твоей родной половинки! Ступай с миром, не тревожь карты понапрасну.";
+
+        function loadGypsyPortraitFromPloshad() {
+            const canvas = document.getElementById('gypsyPortraitCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            const extensions = ['.jpg', '.jpg.jpg', '.jpeg', '.png'];
+            let extIdx = 0;
+            const img = new Image();
+
+            function tryLoad() {
+                if (extIdx < extensions.length) {
+                    img.src = 'ploshad' + extensions[extIdx];
+                    extIdx++;
+                }
+            }
+
+            img.onload = function () {
+                const iw = img.naturalWidth;
+                const ih = img.naturalHeight;
+                const sx = iw * 0.66;
+                const sy = ih * 0.45;
+                const sw = iw * 0.19;
+                const sh = ih * 0.46;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            };
+
+            img.onerror = tryLoad;
+            tryLoad();
+        }
+
+        function renderGypsyHeader() {
+            const st = GornitsaWallet.state;
+            const purseTxt = st.walletTaken
+                ? `<b>${st.cashBalance}</b> мон. (с собой)`
+                : `<b style="color:#ff8a80;">Забыт в Горнице!</b>`;
+            document.getElementById('gypCashPill').innerHTML = `👛 Кошелёк: ${purseTxt}`;
+            document.getElementById('gypBankPill').innerHTML = `🏦 В Банке: <b>${st.bankBalance}</b> мон.`;
+        }
+
+        function checkSecondVisitOnLoad() {
+            const alreadyVisited = localStorage.getItem(GYPSY_VISITED_KEY);
+            if (alreadyVisited) {
+                document.getElementById('firstVisitGypsyStage').style.display = 'none';
+                const box = document.getElementById('secondVisitGypsyBox');
+                document.getElementById('secondVisitGypsyText').textContent = CUSTOM_SECOND_VISIT_GYPSY_MESSAGE;
+                box.style.display = 'block';
+            }
+        }
+
+        function gildGypsyHand() {
+            const cardBox = document.getElementById('soulmateCard');
+            cardBox.style.display = 'none';
+
+            // Оплата 50 монет наличными из кошелька
+            const payRes = GornitsaWallet.payCash(50, 'gypsy', 'Позолочение ручки Цыганке за данные второй половинки');
+            if (!payRes.ok) {
+                // Если кошелёк забыт в Горнице или нет наличных — человек сразу оказывается снова на Площади!
+                if (payRes.code === 'WALLET_FORGOTTEN') {
+                    alert("Цыганка качает головой:\n\n«Хватились за пояс — а мешочка с монетами нет! Вы забыли кошелёк на столе в Горнице. Возвращайтесь сами в Горницу, возьмите свои деньги и приходите ко мне снова!»");
+                } else {
+                    alert("Цыганка качает головой:\n\n«Милый человек, у тебя в мешочке нет наличных монет! Ступай обратно на Площадь, возьми свои деньги и возвращайся ко мне сам!»");
+                }
+                window.location.href = 'index.html?loc=ploshad';
+                return;
+            }
+
+            renderGypsyHeader();
+            localStorage.setItem(GYPSY_VISITED_KEY, 'true');
+            document.getElementById('gildBtn').style.display = 'none';
+
+            const soulmateYear = '........';
+            const soulmateDay = '........';
+            const soulmateMonth = '......';
+
+            cardBox.style.display = 'block';
+            cardBox.innerHTML = `
+                <p>
+                    Милый человек, твоя половинка<br>
+                    <span class="soulmate-highlight">${soulmateYear}</span> года рождения,<br>
+                    <span class="soulmate-highlight">${soulmateDay}</span> числа<br>
+                    <span class="soulmate-highlight">${soulmateMonth}</span> месяца<br>
+                    твоей группы крови, и похожи вы как брат с сестрой.<br>
+                    У вас одна национальность, менталитет.<br>
+                    Вы одного социального происхождения и менталитета.<br>
+                    Но, осторожно... смотри, чтобы это не был религиозный маньяк и опасность тебе грозит, если вы будете разными по духу.<br>
+                    Смотри, чтобы отношение к материальным ценностям и деньгам у вас было одинаковое, иначе беда будет в жизни с этим человеком.
+                </p>
+                <p>
+                    Трудно найти свою вторую половинку самостоятельно, но ты найдёшь... иди к местному детективу нашей волшебной страны, он найдёт тебе единственного и неповторимого... да.. я вижу, что он и сам тебя ищет...<br>
+                    Ступай к Детективу на Площади, заполни анкету на розыск.. он волшебник, кроме него никто тебе не поможет... и не тревожь его пустыми посещениями и вопросами, когда отыщет твою половинку, он пришлёт тебе особое послание, это его работа.. он сам тебя найдёт в нашей волшебной стране.. ступай, мил человек, с миром...
+                </p>
+                <div style="text-align:center; margin-top:18px;">
+                    <button class="go-detective-btn" onclick="window.location.href='detektiv.html'">
+                        🕵️‍♂️ Идти к Детективу и заполнить анкету на розыск (+1000 монет)
+                    </button>
+                </div>
+            `;
+        }
+
+        function closeGypsy() {
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = 'index.html?loc=ploshad';
+            }
+        }
+
+        renderGypsyHeader();
+        loadGypsyPortraitFromPloshad();
+        checkSecondVisitOnLoad();
+    </script>
+</body>
+</html>

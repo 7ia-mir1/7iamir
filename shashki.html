@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Русские шашки в Горнице</title>
+    <script src="wallet.js"></script>
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body {
+            margin: 0;
+            padding: 15px;
+            min-height: 100vh;
+            background: radial-gradient(circle at center, #2e1c10 0%, #140b05 100%);
+            color: #f4e8d1;
+            font-family: 'Georgia', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .game-wrapper {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 1050px;
+            width: 100%;
+            background: rgba(34, 21, 12, 0.95);
+            border: 3px solid #b8860b;
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9), inset 0 0 30px rgba(0,0,0,0.7);
+        }
+        .board-frame {
+            position: relative;
+            padding: 18px;
+            background: linear-gradient(135deg, #4a2c15 0%, #2b1708 50%, #3d2310 100%);
+            border: 4px solid #8b5a2b;
+            outline: 2px solid #d4af37;
+            border-radius: 12px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.85), inset 0 0 18px rgba(0,0,0,0.8);
+        }
+        canvas {
+            display: block;
+            width: min(520px, 84vw);
+            height: min(520px, 84vw);
+            border: 2px solid #221206;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.7);
+        }
+        .side-panel {
+            flex: 1;
+            min-width: 280px;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .panel-title {
+            margin: 0;
+            color: #ffd700;
+            font-size: 23px;
+            text-align: center;
+            border-bottom: 1.5px dashed #b8860b;
+            padding-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .status-box {
+            background: linear-gradient(to bottom, #261509, #1a0e05);
+            border: 1.5px solid #d4af37;
+            border-radius: 10px;
+            padding: 12px 15px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffe082;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+        }
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            background: rgba(20, 12, 6, 0.75);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #6e4726;
+            font-size: 14.5px;
+        }
+        .bank-box {
+            background: linear-gradient(180deg, #321d0d 0%, #1d1006 100%);
+            border: 1.5px solid #d4af37;
+            border-radius: 9px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #f4e8d1;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
+        }
+        .bank-box b {
+            color: #ffd700;
+            font-size: 15px;
+        }
+        .level-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .level-label {
+            font-size: 14px;
+            color: #d8b467;
+            font-weight: bold;
+        }
+        .lvl-btn {
+            background: linear-gradient(180deg, #382212 0%, #26160b 100%);
+            color: #e5d1b3;
+            border: 1.5px solid #634326;
+            border-radius: 9px;
+            padding: 11px 14px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .lvl-btn:hover {
+            border-color: #d4af37;
+            color: #fff;
+        }
+        .lvl-btn.active {
+            background: linear-gradient(90deg, #6e481f 0%, #4e3113 100%);
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            font-weight: bold;
+            box-shadow: 0 0 14px rgba(255, 215, 0, 0.35);
+        }
+        .level-tag {
+            font-size: 12.5px;
+            color: #50fa7b;
+            font-weight: bold;
+        }
+        .lvl-btn.active .level-tag {
+            color: #ffe885;
+            font-weight: bold;
+        }
+        .action-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .act-btn {
+            flex: 1;
+            background: linear-gradient(to bottom, #7a5230, #4a301a);
+            color: #ffd700;
+            border: 1.5px solid #ffd700;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 14.5px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .act-btn:hover {
+            background: linear-gradient(to bottom, #9c6b40, #634124);
+            color: #fff;
+            box-shadow: 0 0 10px #ffd700;
+        }
+        .back-btn {
+            background: linear-gradient(to bottom, #8b0000, #4d0000);
+            color: #fff;
+        }
+        .back-btn:hover {
+            background: linear-gradient(to bottom, #b30000, #660000);
+        }
+        .rules-note {
+            font-size: 13px;
+            line-height: 1.45;
+            color: #d8c39e;
+            background: rgba(15, 9, 4, 0.6);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 3px solid #d4af37;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <div class="board-frame">
+            <canvas id="boardCanvas" width="640" height="640"></canvas>
+        </div>
+
+        <div class="side-panel">
+            <h1 class="panel-title">🪵 Русские шашки</h1>
+
+            <div class="bank-box">
+                <span>🏦 Ваш счёт в Банке:</span>
+                <b id="bankBalanceText">800 мон.</b>
+            </div>
+
+            <div class="status-box" id="statusText">Ваш ход (светлые шашки)</div>
+
+            <div class="score-row">
+                <span>⚪ Ваши (самшит): <strong id="whiteCount">12</strong></span>
+                <span>⚫ Соперник (дуб): <strong id="blackCount">12</strong></span>
+            </div>
+
+            <div class="level-group">
+                <div class="level-label">Выберите уровень соперника:</div>
+                <button class="lvl-btn" id="lvl-easy" onclick="setDifficulty('easy')">
+                    <span>🍀 Слабый (Домовой)</span>
+                    <span class="level-tag">+5 монет</span>
+                </button>
+                <button class="lvl-btn active" id="lvl-medium" onclick="setDifficulty('medium')">
+                    <span>🐈 Средний (Кот Баюн)</span>
+                    <span class="level-tag">+15 монет</span>
+                </button>
+                <button class="lvl-btn" id="lvl-hard" onclick="setDifficulty('hard')">
+                    <span>🦉 Мастер (Мудрец)</span>
+                    <span class="level-tag">+50 монет</span>
+                </button>
+            </div>
+
+            <div class="action-row">
+                <button class="act-btn" onclick="startNewGame()">🔄 Новая партия</button>
+                <button class="act-btn" id="soundBtn" onclick="toggleSound()">🔊 Стук: ВКЛ</button>
+            </div>
+
+            <button class="act-btn back-btn" onclick="returnToGornitsa()">🏠 Вернуться в Горницу</button>
+
+            <div class="rules-note">
+                <strong>Правила русских шашек:</strong><br>
+                • Обязательный бой (бить можно вперёд и назад). «Летающая» дамка ходит и бьёт на любое число полей.<br>
+                • За победу монеты зачисляются на ваш счёт в Банке, а при проигрыше — списываются со счёта!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+        const SIZE = 8;
+        const CELL = canvas.width / SIZE;
+
+        // 1: белая, 2: белая дамка, -1: чёрная, -2: чёрная дамка, 0: пусто
+        let board = [];
+        let turn = 1; // 1 = игрок, -1 = бот
+        let selected = null;
+        let legalMoves = [];
+        let lockedPiece = null; // если продолжается серия взятий одной шашкой
+        let difficulty = 'medium';
+        let gameOver = false;
+        let aiThinking = false;
+        let soundEnabled = true;
+        let rewardClaimedForGame = false;
+
+        const LEVEL_REWARDS = { easy: 5, medium: 15, hard: 50 };
+        const LEVEL_NAMES = { easy: 'Домовой', medium: 'Кот Баюн', hard: 'Мудрец' };
+
+        function updateBankDisplay() {
+            const el = document.getElementById('bankBalanceText');
+            if (!el) return;
+            try {
+                if (window.GornitsaWallet) {
+                    if (typeof GornitsaWallet.init === 'function') GornitsaWallet.init();
+                    if (GornitsaWallet.state && typeof GornitsaWallet.state.bankBalance === 'number') {
+                        el.textContent = GornitsaWallet.state.bankBalance + ' мон.';
+                        return;
+                    }
+                }
+                const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+                if (raw) {
+                    const st = JSON.parse(raw);
+                    if (typeof st.bankBalance === 'number') {
+                        el.textContent = st.bankBalance + ' мон.';
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function awardWinCoins() {
+            if (rewardClaimedForGame) return 0;
+            rewardClaimedForGame = true;
+            const coins = LEVEL_REWARDS[difficulty] || 15;
+            const reason = `Победа в Шашки над соперником «${LEVEL_NAMES[difficulty]}»`;
+            try {
+                if (window.GornitsaWallet && typeof GornitsaWallet.earnToBank === 'function') {
+                    GornitsaWallet.earnToBank(coins, reason);
+                } else {
+                    const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+                    const st = raw ? JSON.parse(raw) : { bankBalance: 800, cashBalance: 0, transactions: [] };
+                    st.bankBalance = (st.bankBalance || 0) + coins;
+                    st.transactions = st.transactions || [];
+                    st.transactions.unshift({
+                        id: Date.now(),
+                        date: new Date().toLocaleString('ru-RU'),
+                        type: 'bank_in',
+                        amount: coins,
+                        title: reason
+                    });
+                    localStorage.setItem('GORNITSA_ECONOMY_V1', JSON.stringify(st));
+                }
+            } catch (e) {}
+            updateBankDisplay();
+            return coins;
+        }
+
+        function deductLossCoins() {
+            if (rewardClaimedForGame) return 0;
+            rewardClaimedForGame = true;
+            const coins = LEVEL_REWARDS[difficulty] || 15;
+            const reason = `Проигрыш в Шашки сопернику «${LEVEL_NAMES[difficulty]}»`;
+            try {
+                if (window.GornitsaWallet && typeof GornitsaWallet.deductFromBank === 'function') {
+                    GornitsaWallet.deductFromBank(coins, reason);
+                } else {
+                    const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+                    const st = raw ? JSON.parse(raw) : { bankBalance: 800, cashBalance: 0, transactions: [] };
+                    st.bankBalance = Math.max(0, (st.bankBalance || 0) - coins);
+                    st.transactions = st.transactions || [];
+                    st.transactions.unshift({
+                        id: Date.now(),
+                        date: new Date().toLocaleString('ru-RU'),
+                        type: 'bank_out',
+                        amount: coins,
+                        title: reason
+                    });
+                    localStorage.setItem('GORNITSA_ECONOMY_V1', JSON.stringify(st));
+                }
+            } catch (e) {}
+            updateBankDisplay();
+            return coins;
+        }
+
+        let audioCtx = null;
+        function playWoodClick(isCapture = false) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(isCapture ? 155 : 210, now);
+                osc.frequency.exponentialRampToValueAtTime(48, now + 0.085);
+                gain.gain.setValueAtTime(isCapture ? 0.45 : 0.28, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.09);
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').innerText = soundEnabled ? "🔊 Стук: ВКЛ" : "🔇 Стук: ВЫКЛ";
+        }
+
+        function returnToGornitsa() {
+            if (window.opener && !window.opener.closed) {
+                window.close();
+            } else {
+                window.location.href = 'index.html?loc=izba';
+            }
+        }
+
+        function setDifficulty(lvl) {
+            difficulty = lvl;
+            document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('lvl-' + lvl).classList.add('active');
+            startNewGame();
+        }
+
+        function startNewGame() {
+            board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if ((r + c) % 2 === 1) {
+                        if (r < 3) board[r][c] = -1;
+                        else if (r > 4) board[r][c] = 1;
+                    }
+                }
+            }
+            turn = 1;
+            selected = null;
+            lockedPiece = null;
+            gameOver = false;
+            aiThinking = false;
+            rewardClaimedForGame = false;
+            updateLegalMoves();
+            updateBankDisplay();
+            updateUI();
+            drawBoard();
+        }
+
+        function cloneBoard(b) {
+            return b.map(row => row.slice());
+        }
+
+        function inside(r, c) {
+            return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+        }
+
+        // Получение всех возможных взятий с клетки (r, c) на доске b
+        function getCapturesForPiece(b, r, c, alreadyCaptured = []) {
+            const p = b[r][c];
+            if (p === 0) return [];
+            const side = Math.sign(p);
+            const isKing = Math.abs(p) === 2;
+            const dirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+            const captures = [];
+
+            if (!isKing) {
+                for (const [dr, dc] of dirs) {
+                    const mr = r + dr, mc = c + dc;
+                    const tr = r + 2 * dr, tc = c + 2 * dc;
+                    if (inside(tr, tc) && b[tr][tc] === 0 && Math.sign(b[mr][mc]) === -side) {
+                        const key = mr + ',' + mc;
+                        if (!alreadyCaptured.includes(key)) {
+                            const promotes = (side === 1 && tr === 0) || (side === -1 && tr === SIZE - 1);
+                            captures.push({
+                                fromR: r, fromC: c, toR: tr, toC: tc,
+                                capR: mr, capC: mc,
+                                promotes
+                            });
+                        }
+                    }
+                }
+            } else {
+                for (const [dr, dc] of dirs) {
+                    let mr = r + dr, mc = c + dc;
+                    while (inside(mr, mc) && b[mr][mc] === 0) {
+                        mr += dr; mc += dc;
+                    }
+                    if (inside(mr, mc) && Math.sign(b[mr][mc]) === -side) {
+                        const key = mr + ',' + mc;
+                        if (!alreadyCaptured.includes(key)) {
+                            let tr = mr + dr, tc = mc + dc;
+                            while (inside(tr, tc) && b[tr][tc] === 0) {
+                                captures.push({
+                                    fromR: r, fromC: c, toR: tr, toC: tc,
+                                    capR: mr, capC: mc,
+                                    promotes: false
+                                });
+                                tr += dr; tc += dc;
+                            }
+                        }
+                    }
+                }
+            }
+            return captures;
+        }
+
+        // Проверка, есть ли продолжение боя после взятия
+        function hasFurtherCapture(b, move) {
+            const nb = cloneBoard(b);
+            let p = nb[move.fromR][move.fromC];
+            if (move.promotes) p = Math.sign(p) * 2;
+            nb[move.fromR][move.fromC] = 0;
+            nb[move.capR][move.capC] = 0;
+            nb[move.toR][move.toC] = p;
+            return getCapturesForPiece(nb, move.toR, move.toC).length > 0;
+        }
+
+        function getAllMovesForSide(b, side, locked = null) {
+            let allCaptures = [];
+            if (locked) {
+                allCaptures = getCapturesForPiece(b, locked.r, locked.c);
+                const continuations = allCaptures.filter(m => hasFurtherCapture(b, m));
+                return continuations.length > 0 ? continuations : allCaptures;
+            }
+
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (Math.sign(b[r][c]) === side) {
+                        const caps = getCapturesForPiece(b, r, c);
+                        if (caps.length > 0) allCaptures.push(...caps);
+                    }
+                }
+            }
+            if (allCaptures.length > 0) return allCaptures;
+
+            const quiet = [];
+            const dirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const p = b[r][c];
+                    if (Math.sign(p) !== side) continue;
+                    if (Math.abs(p) === 1) {
+                        const forwardDr = side === 1 ? -1 : 1;
+                        for (const dc of [-1, 1]) {
+                            const tr = r + forwardDr, tc = c + dc;
+                            if (inside(tr, tc) && b[tr][tc] === 0) {
+                                const promotes = (side === 1 && tr === 0) || (side === -1 && tr === SIZE - 1);
+                                quiet.push({ fromR: r, fromC: c, toR: tr, toC: tc, capR: null, capC: null, promotes });
+                            }
+                        }
+                    } else {
+                        for (const [dr, dc] of dirs) {
+                            let tr = r + dr, tc = c + dc;
+                            while (inside(tr, tc) && b[tr][tc] === 0) {
+                                quiet.push({ fromR: r, fromC: c, toR: tr, toC: tc, capR: null, capC: null, promotes: false });
+                                tr += dr; tc += dc;
+                            }
+                        }
+                    }
+                }
+            }
+            return quiet;
+        }
+
+        function updateLegalMoves() {
+            legalMoves = getAllMovesForSide(board, turn, lockedPiece);
+            if (legalMoves.length === 0) {
+                gameOver = true;
+            }
+        }
+
+        function executeMoveOnBoard(b, move) {
+            let p = b[move.fromR][move.fromC];
+            if (move.promotes) p = Math.sign(p) * 2;
+            b[move.fromR][move.fromC] = 0;
+            if (move.capR !== null) {
+                b[move.capR][move.capC] = 0;
+            }
+            b[move.toR][move.toC] = p;
+        }
+
+        function makeMove(move) {
+            const isCap = move.capR !== null;
+            executeMoveOnBoard(board, move);
+            playWoodClick(isCap);
+
+            if (isCap) {
+                const moreCaps = getCapturesForPiece(board, move.toR, move.toC);
+                if (moreCaps.length > 0) {
+                    lockedPiece = { r: move.toR, c: move.toC };
+                    selected = { r: move.toR, c: move.toC };
+                    updateLegalMoves();
+                    updateUI();
+                    drawBoard();
+                    if (turn === -1 && !gameOver) {
+                        setTimeout(runBotMove, 380);
+                    }
+                    return;
+                }
+            }
+
+            lockedPiece = null;
+            selected = null;
+            turn = -turn;
+            updateLegalMoves();
+            updateUI();
+            drawBoard();
+
+            if (!gameOver && turn === -1) {
+                aiThinking = true;
+                updateUI();
+                setTimeout(runBotMove, 420);
+            }
+        }
+
+        // Полные цепочки ходов для минимакса ИИ
+        function generateTurnSequences(b, side, locked = null) {
+            const moves = getAllMovesForSide(b, side, locked);
+            if (moves.length === 0) return [];
+            const results = [];
+            for (const m of moves) {
+                const nb = cloneBoard(b);
+                executeMoveOnBoard(nb, m);
+                if (m.capR !== null) {
+                    const nextCaps = getCapturesForPiece(nb, m.toR, m.toC);
+                    if (nextCaps.length > 0) {
+                        const subSeqs = generateTurnSequences(nb, side, { r: m.toR, c: m.toC });
+                        for (const s of subSeqs) {
+                            results.push({ firstMove: m, finalBoard: s.finalBoard });
+                        }
+                        continue;
+                    }
+                }
+                results.push({ firstMove: m, finalBoard: nb });
+            }
+            return results;
+        }
+
+        function evaluateBoard(b) {
+            let score = 0;
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const p = b[r][c];
+                    if (p === 0) continue;
+                    const centerBonus = (r >= 2 && r <= 5 && c >= 2 && c <= 5) ? 14 : 0;
+                    if (p === -1) {
+                        score += 100 + r * 7 + centerBonus + (r === 0 ? 10 : 0);
+                    } else if (p === -2) {
+                        score += 320 + centerBonus * 1.5;
+                    } else if (p === 1) {
+                        score -= 100 + (7 - r) * 7 + centerBonus + (r === 7 ? 10 : 0);
+                    } else if (p === 2) {
+                        score -= 320 + centerBonus * 1.5;
+                    }
+                }
+            }
+            return score;
+        }
+
+        function minimax(b, depth, alpha, beta, maximizing) {
+            const side = maximizing ? -1 : 1;
+            const seqs = generateTurnSequences(b, side);
+            if (seqs.length === 0) {
+                return maximizing ? -9999 - depth : 9999 + depth;
+            }
+            if (depth === 0) {
+                return evaluateBoard(b);
+            }
+            if (maximizing) {
+                let maxEval = -Infinity;
+                for (const s of seqs) {
+                    const ev = minimax(s.finalBoard, depth - 1, alpha, beta, false);
+                    if (ev > maxEval) maxEval = ev;
+                    if (ev > alpha) alpha = ev;
+                    if (beta <= alpha) break;
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const s of seqs) {
+                    const ev = minimax(s.finalBoard, depth - 1, alpha, beta, true);
+                    if (ev < minEval) minEval = ev;
+                    if (ev < beta) beta = ev;
+                    if (beta <= alpha) break;
+                }
+                return minEval;
+            }
+        }
+
+        function runBotMove() {
+            if (gameOver || turn !== -1) return;
+            aiThinking = true;
+
+            const moves = legalMoves;
+            if (moves.length === 0) {
+                aiThinking = false;
+                gameOver = true;
+                updateUI();
+                return;
+            }
+
+            let chosen = moves[0];
+
+            if (difficulty === 'easy') {
+                chosen = moves[Math.floor(Math.random() * moves.length)];
+            } else {
+                const depth = difficulty === 'medium' ? 3 : 6;
+                const seqs = generateTurnSequences(board, -1, lockedPiece);
+                let bestScore = -Infinity;
+                let bestFirstMoves = [];
+
+                for (const s of seqs) {
+                    const noise = difficulty === 'medium' ? (Math.random() * 12 - 6) : 0;
+                    const score = minimax(s.finalBoard, depth - 1, -Infinity, Infinity, false) + noise;
+                    if (score > bestScore + 0.5) {
+                        bestScore = score;
+                        bestFirstMoves = [s.firstMove];
+                    } else if (Math.abs(score - bestScore) <= 0.5) {
+                        bestFirstMoves.push(s.firstMove);
+                    }
+                }
+                if (bestFirstMoves.length > 0) {
+                    chosen = bestFirstMoves[Math.floor(Math.random() * bestFirstMoves.length)];
+                }
+            }
+
+            aiThinking = false;
+            makeMove(chosen);
+        }
+
+        function updateUI() {
+            let w = 0, bl = 0;
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (board[r][c] > 0) w++;
+                    if (board[r][c] < 0) bl++;
+                }
+            }
+            document.getElementById('whiteCount').innerText = w;
+            document.getElementById('blackCount').innerText = bl;
+
+            const st = document.getElementById('statusText');
+            if (gameOver) {
+                if (turn === 1) {
+                    const lostCoins = deductLossCoins();
+                    st.innerText = `❌ Победил ${LEVEL_NAMES[difficulty]}! С вашего счёта в Банке списано −${lostCoins} монет.`;
+                    st.style.color = "#ff9e80";
+                } else {
+                    const wonCoins = awardWinCoins();
+                    st.innerText = `🏆 Вы победили (${LEVEL_NAMES[difficulty]})! В Банк зачислено +${wonCoins} монет!`;
+                    st.style.color = "#69f0ae";
+                }
+                return;
+            }
+            const hasMustCapture = legalMoves.some(m => m.capR !== null);
+            if (turn === 1) {
+                st.style.color = "#ffe082";
+                st.innerText = hasMustCapture
+                    ? "⚔️ Ваш ход: обязательное взятие!"
+                    : "⚪ Ваш ход (выберите шашку)";
+            } else {
+                st.style.color = "#ffd54f";
+                st.innerText = "⏳ Соперник обдумывает ход...";
+            }
+        }
+
+        function drawWoodCell(x, y, size, isDark, r, c) {
+            ctx.save();
+            const grad = ctx.createLinearGradient(x, y, x + size, y + size);
+            if (isDark) {
+                grad.addColorStop(0, '#543118');
+                grad.addColorStop(0.5, '#432510');
+                grad.addColorStop(1, '#361d0b');
+            } else {
+                grad.addColorStop(0, '#ebd3a7');
+                grad.addColorStop(0.5, '#dfc18d');
+                grad.addColorStop(1, '#d2ae74');
+            }
+            ctx.fillStyle = grad;
+            ctx.fillRect(x, y, size, size);
+
+            // Мягкие прожилки волокон дерева
+            ctx.strokeStyle = isDark ? 'rgba(25, 12, 4, 0.28)' : 'rgba(160, 115, 60, 0.22)';
+            ctx.lineWidth = 1.2;
+            for (let i = 1; i <= 5; i++) {
+                ctx.beginPath();
+                const py = y + (size / 6) * i;
+                ctx.moveTo(x, py);
+                ctx.bezierCurveTo(
+                    x + size * 0.33, py + ((r + i) % 2 === 0 ? 4 : -4),
+                    x + size * 0.66, py + ((c + i) % 2 === 0 ? -4 : 4),
+                    x + size, py
+                );
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+            ctx.restore();
+        }
+
+        function drawWoodenPiece(cx, cy, radius, piece, isSelected, isMustCapture) {
+            const isWhite = piece > 0;
+            const isKing = Math.abs(piece) === 2;
+
+            ctx.save();
+
+            // Мягкая тень на доске
+            ctx.beginPath();
+            ctx.arc(cx + 3, cy + 5, radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.fill();
+
+            // Подсветка выбранной или обязанной бить шашки
+            if (isSelected || isMustCapture) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius + 4, 0, Math.PI * 2);
+                ctx.strokeStyle = isSelected ? '#50fa7b' : '#ffd700';
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+            }
+
+            // Основное точёное тело шашки
+            const bodyGrad = ctx.createRadialGradient(
+                cx - radius * 0.3, cy - radius * 0.3, radius * 0.1,
+                cx, cy, radius
+            );
+            if (isWhite) {
+                bodyGrad.addColorStop(0, '#fff7e0');
+                bodyGrad.addColorStop(0.55, '#e8ca96');
+                bodyGrad.addColorStop(0.9, '#b88b4a');
+                bodyGrad.addColorStop(1, '#7d5726');
+            } else {
+                bodyGrad.addColorStop(0, '#6e4526');
+                bodyGrad.addColorStop(0.5, '#3b2110');
+                bodyGrad.addColorStop(0.9, '#211107');
+                bodyGrad.addColorStop(1, '#120803');
+            }
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = bodyGrad;
+            ctx.fill();
+
+            // Токарные концентрические канавки
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 0.76, 0, Math.PI * 2);
+            ctx.strokeStyle = isWhite ? 'rgba(120, 80, 30, 0.55)' : 'rgba(15, 6, 2, 0.75)';
+            ctx.lineWidth = 2.2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 0.72, 0, Math.PI * 2);
+            ctx.strokeStyle = isWhite ? 'rgba(255, 250, 230, 0.65)' : 'rgba(160, 105, 60, 0.35)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 0.48, 0, Math.PI * 2);
+            ctx.strokeStyle = isWhite ? 'rgba(120, 80, 30, 0.45)' : 'rgba(15, 6, 2, 0.65)';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+
+            // Латунный медальон для дамки
+            if (isKing) {
+                const medalGrad = ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, radius * 0.44);
+                medalGrad.addColorStop(0, '#fff3b0');
+                medalGrad.addColorStop(0.6, '#d4af37');
+                medalGrad.addColorStop(1, '#7a580b');
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius * 0.42, 0, Math.PI * 2);
+                ctx.fillStyle = medalGrad;
+                ctx.fill();
+                ctx.strokeStyle = '#4a3204';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Резная славянская звезда-розетка в центре дамки
+                ctx.fillStyle = '#4a2c04';
+                ctx.font = `bold ${Math.round(radius * 0.55)}px Georgia`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('✵', cx, cy + 1);
+            }
+
+            ctx.restore();
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const mustCaptureOrigins = new Set();
+            if (turn === 1 && !gameOver) {
+                legalMoves.forEach(m => {
+                    if (m.capR !== null) mustCaptureOrigins.add(m.fromR + ',' + m.fromC);
+                });
+            }
+
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const x = c * CELL;
+                    const y = r * CELL;
+                    const isDark = (r + c) % 2 === 1;
+                    drawWoodCell(x, y, CELL, isDark, r, c);
+                }
+            }
+
+            // Подсветка допустимых ходов для выбранной шашки
+            if (selected && turn === 1 && !gameOver) {
+                const movesForSelected = legalMoves.filter(
+                    m => m.fromR === selected.r && m.fromC === selected.c
+                );
+                movesForSelected.forEach(m => {
+                    const cx = m.toC * CELL + CELL / 2;
+                    const cy = m.toR * CELL + CELL / 2;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, CELL * 0.19, 0, Math.PI * 2);
+                    ctx.fillStyle = m.capR !== null ? 'rgba(255, 110, 64, 0.82)' : 'rgba(105, 240, 174, 0.75)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+
+            // Отрисовка шашек
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const p = board[r][c];
+                    if (p === 0) continue;
+                    const cx = c * CELL + CELL / 2;
+                    const cy = r * CELL + CELL / 2;
+                    const isSel = selected && selected.r === r && selected.c === c;
+                    const isMust = mustCaptureOrigins.has(r + ',' + c);
+                    drawWoodenPiece(cx, cy, CELL * 0.39, p, isSel, isMust);
+                }
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (gameOver || turn !== 1 || aiThinking) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            const c = Math.floor(x / CELL);
+            const r = Math.floor(y / CELL);
+            if (!inside(r, c)) return;
+
+            // Если нажата точка назначения для выбранной шашки
+            if (selected) {
+                const move = legalMoves.find(
+                    m => m.fromR === selected.r && m.fromC === selected.c && m.toR === r && m.toC === c
+                );
+                if (move) {
+                    makeMove(move);
+                    return;
+                }
+            }
+
+            // Выбор своей шашки
+            if (board[r][c] > 0) {
+                if (lockedPiece && (lockedPiece.r !== r || lockedPiece.c !== c)) return;
+                const canMove = legalMoves.some(m => m.fromR === r && m.fromC === c);
+                if (canMove) {
+                    selected = { r, c };
+                    playWoodClick(false);
+                } else {
+                    selected = null;
+                }
+                drawBoard();
+            }
+        });
+
+        startNewGame();
+        window.addEventListener('gornitsaWalletUpdated', updateBankDisplay);
+        window.addEventListener('focus', updateBankDisplay);
+    </script>
+</body>
+</html>

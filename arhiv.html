@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заветный Сундук — Архив Диагностик</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 24px 16px;
+            background: radial-gradient(circle at center, #362212 0%, #1a0f07 70%, #0d0703 100%);
+            color: #f4e8d1;
+            font-family: 'Georgia', serif;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 860px;
+            margin: 55px auto 30px auto;
+            background: rgba(28, 18, 10, 0.96);
+            border: 3px solid #d4af37;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.95);
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed #d4af37;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        h1 {
+            color: #ffd700;
+            margin: 0;
+            font-size: 24px;
+        }
+        .close-chest-btn {
+            background: linear-gradient(to bottom, #8b0000, #500000);
+            color: #fff;
+            border: 1.5px solid #ffd700;
+            padding: 9px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .close-chest-btn:hover {
+            box-shadow: 0 0 12px #ffd700;
+        }
+        .fee-note {
+            background: rgba(212, 175, 55, 0.14);
+            border: 1px solid #d4af37;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #ffe082;
+            margin-bottom: 20px;
+        }
+        .archive-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .archive-item {
+            background: linear-gradient(135deg, #fbf2de, #ebd4a7);
+            color: #2b180a;
+            border: 2px solid #8b5a2b;
+            border-radius: 10px;
+            padding: 16px 20px;
+            position: relative;
+        }
+        .archive-item h3 {
+            margin: 0 0 8px 0;
+            color: #6b1d1d;
+        }
+        .archive-meta {
+            font-size: 12.5px;
+            color: #6e4726;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+        .del-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: #8b0000;
+            color: #fff;
+            border: 1px solid #ffd700;
+            border-radius: 5px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .empty-msg {
+            text-align: center;
+            padding: 40px 20px;
+            color: #c8b08a;
+            font-size: 17px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body translate="no" class="notranslate">
+    <script src="wallet.js"></script>
+
+    <div class="container">
+        <div class="header-bar">
+            <h1>🧰 Заветный Сундук: Архив Диагностик</h1>
+            <button class="close-chest-btn" onclick="closeChestAndReturn()">🔒 Закрыть сундук и вернуться к Озеру</button>
+        </div>
+
+        <div class="fee-note">
+            🔑 Сундук открыт (списано <strong>2 монеты</strong>). Обратите внимание: если вы закроете сундук, а затем снова его откроете — за новое открытие крышки снова спишется 2 монеты.
+        </div>
+
+        <div id="archiveContainer" class="archive-list"></div>
+    </div>
+
+    <script>
+        (function verifyChestFeeOnOpen() {
+            const paidFromLake = sessionStorage.getItem('GORNITSA_ARCHIVE_PAID_SESSION');
+            if (paidFromLake === '1') {
+                sessionStorage.removeItem('GORNITSA_ARCHIVE_PAID_SESSION');
+                return;
+            }
+            if (window.GornitsaWallet && typeof GornitsaWallet.payCash === 'function') {
+                const res = GornitsaWallet.payCash(2, 'sunduk_archive', 'Повторное открытие Сундука (Архив диагностик)');
+                if (!res.ok) {
+                    alert(res.msg || 'Для открытия Сундука требуется 2 монеты в кошельке!');
+                    sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.replace('index.html?loc=ozero#ozero');
+                }
+            }
+        })();
+
+        function closeChestAndReturn() {
+            sessionStorage.removeItem('GORNITSA_ARCHIVE_PAID_SESSION');
+            sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.replace('index.html?loc=ozero#ozero');
+        }
+
+        function renderArchive() {
+            const box = document.getElementById('archiveContainer');
+            let list = [];
+            try {
+                list = JSON.parse(localStorage.getItem('GORNITSA_DIAG_ARCHIVE_V1') || '[]');
+            } catch (e) {}
+
+            if (!list.length) {
+                box.innerHTML = '<div class="empty-msg">В сундуке пока нет сохранённых свитков. Проведите диагностику у Лешего, и она появится здесь!</div>';
+                return;
+            }
+
+            box.innerHTML = list.map((item, idx) => `
+                <div class="archive-item">
+                    <button class="del-btn" onclick="deleteRecord(${idx})">Удалить</button>
+                    <h3>📜 ${item.name1} и ${item.name2}</h3>
+                    <div class="archive-meta">Дата записи: ${item.dateStr || 'Недавно'}</div>
+                    <div><strong>👨 ${item.name1} (${item.b1}):</strong> ${item.z1}, год: ${item.an1}, число дня: ${item.num1}, кровь: ${item.blood1}-я</div>
+                    <div><strong>👩 ${item.name2} (${item.b2}):</strong> ${item.z2}, год: ${item.an2}, число дня: ${item.num2}, кровь: ${item.blood2}-я</div>
+                    <div style="margin-top:8px;">• ${item.charSummary}</div>
+                    <div>• ${item.bloodHarmony}</div>
+                </div>
+            `).join('');
+        }
+
+        function deleteRecord(index) {
+            try {
+                const list = JSON.parse(localStorage.getItem('GORNITSA_DIAG_ARCHIVE_V1') || '[]');
+                list.splice(index, 1);
+                localStorage.setItem('GORNITSA_DIAG_ARCHIVE_V1', JSON.stringify(list));
+                renderArchive();
+            } catch (e) {}
+        }
+
+        renderArchive();
+    </script>
+</body>
+</html>

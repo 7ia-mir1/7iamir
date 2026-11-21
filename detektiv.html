@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сыскное Агентство Детектива — Анкета поиска второй половинки</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #261608 0%, #0d0703 100%);
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #2b1708;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .detective-scroll {
+            width: min(980px, 96vw);
+            height: 94vh;
+            overflow-y: auto;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 250, 236, 0.99) 0%, rgba(238, 217, 178, 0.99) 65%, rgba(212, 180, 128, 1) 100%);
+            border: 5px solid #5a3210;
+            outline: 2px solid #d4af37;
+            border-radius: 16px;
+            box-shadow:
+                inset 0 0 45px rgba(95, 52, 16, 0.45),
+                0 20px 60px rgba(0, 0, 0, 0.95);
+            padding: 20px 32px;
+        }
+        .detective-scroll::-webkit-scrollbar { width: 10px; }
+        .detective-scroll::-webkit-scrollbar-track { background: rgba(139, 90, 43, 0.18); border-radius: 6px; }
+        .detective-scroll::-webkit-scrollbar-thumb { background: #7a461d; border-radius: 6px; border: 1px solid #d4af37; }
+
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 2px dashed rgba(110, 65, 25, 0.45);
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+
+        .status-pills {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .pill {
+            background: #2b1708;
+            color: #ffe599;
+            border: 1.5px solid #d4af37;
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-size: 14.5px;
+        }
+        .pill b { color: #ffd700; }
+
+        .close-btn {
+            background: linear-gradient(180deg, #8b1e0b 0%, #520f04 100%);
+            color: #ffe599;
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 26px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .close-btn:hover {
+            background: linear-gradient(180deg, #a8240d 0%, #6e1506 100%);
+            color: #fff;
+        }
+
+        .bonus-banner {
+            background: linear-gradient(90deg, rgba(46,125,50,0.18) 0%, rgba(212,175,55,0.28) 50%, rgba(46,125,50,0.18) 100%);
+            border: 2px solid #2e7d32;
+            border-radius: 12px;
+            padding: 14px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .bonus-banner h2 {
+            margin: 0 0 6px 0;
+            color: #1b5e20;
+            font-size: 21px;
+        }
+        .bonus-banner p {
+            margin: 0;
+            font-size: 15.5px;
+            color: #2b1708;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 22px;
+            background: rgba(255, 252, 242, 0.76);
+            border: 2px solid #8b5a2b;
+            border-radius: 14px;
+            padding: 22px;
+        }
+        @media (max-width: 760px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        .photo-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* Фото-рамка уменьшена ровно в 1,5 раза (140x160px вместо 210x240px) */
+        .photo-preview-frame {
+            width: 140px;
+            height: 160px;
+            border: 3px solid #6e4119;
+            outline: 2px solid #d4af37;
+            border-radius: 10px;
+            background: rgba(139, 90, 43, 0.14);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 14px rgba(0,0,0,0.25);
+            position: relative;
+        }
+        .photo-preview-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .thumbs-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            width: 100%;
+            max-width: 185px;
+            margin-bottom: 10px;
+        }
+        .thumb-item {
+            width: 32px;
+            height: 36px;
+            border: 1.5px solid #8b5a2b;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            background: #e9d5b3;
+        }
+        .thumb-item.active {
+            border: 2px solid #2e7d32;
+            box-shadow: 0 0 5px rgba(46,125,50,0.8);
+        }
+        .thumb-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .thumb-del {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(139, 0, 0, 0.85);
+            color: #fff;
+            font-size: 10px;
+            line-height: 11px;
+            padding: 1px 3px;
+            cursor: pointer;
+            border-bottom-left-radius: 4px;
+        }
+
+        .upload-label {
+            background: linear-gradient(180deg, #5c3512 0%, #361e09 100%);
+            color: #ffd700;
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13.5px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-block;
+            width: 100%;
+            max-width: 185px;
+        }
+        .upload-label:hover { color: #fff; }
+
+        .photo-counter {
+            font-size: 13px;
+            font-weight: bold;
+            color: #5a1807;
+            margin-top: 6px;
+        }
+
+        .fields-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 18px;
+        }
+        @media (max-width: 600px) {
+            .fields-column { grid-template-columns: 1fr; }
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .field-group.full {
+            grid-column: 1 / -1;
+        }
+        .field-group label {
+            font-size: 14.5px;
+            font-weight: bold;
+            color: #5a1807;
+            margin-bottom: 5px;
+        }
+        .field-group input,
+        .field-group select,
+        .field-group textarea {
+            padding: 9px 12px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            border: 2px solid #8b5a2b;
+            border-radius: 8px;
+            background: #fffdf7;
+            color: #2b1708;
+        }
+        .field-group textarea {
+            min-height: 75px;
+            resize: vertical;
+        }
+
+        .video-Preview-link {
+            display: none;
+            font-size: 13.5px;
+            color: #1b5e20;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-top: 5px;
+        }
+
+        .submit-row {
+            grid-column: 1 / -1;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-top: 1.5px dashed rgba(139, 90, 43, 0.4);
+            padding-top: 16px;
+        }
+
+        .save-btn {
+            background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
+            color: #fff;
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 12px 28px;
+            font-family: 'Georgia', serif;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+        }
+        .save-btn:hover {
+            background: linear-gradient(180deg, #388e3c 0%, #256f29 100%);
+        }
+
+        /* Табличка при повторном посещении Детектива */
+        .second-visit-detective-box {
+            display: none;
+            background: rgba(255, 250, 235, 0.96);
+            border: 3px solid #5a3210;
+            outline: 2px solid #d4af37;
+            border-radius: 14px;
+            padding: 28px;
+            text-align: center;
+            margin: 24px 0;
+            font-size: 19px;
+            line-height: 1.6;
+            color: #2b1708;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="detective-scroll">
+        <div class="top-row">
+            <div>
+                <h1 style="margin:0; font-size:26px; color:#5a1807;">🕵️‍♂️ Сыскное Бюро Детектива</h1>
+                <div style="font-size:15px; color:#5a3818; margin-top:3px;">
+                    Розыск вашей единственной родной половинки по всем уровням биополей и цвету крови
+                </div>
+            </div>
+            <div class="status-pills">
+                <div class="pill" id="detBankPill">🏦 В Банке: <b>800</b> мон.</div>
+                <div class="pill" id="detCashPill">👛 Наличные: <b>0</b> мон.</div>
+                <button class="close-btn" onclick="closeDetective()">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+
+        <!-- Табличка при повторном заходе к Детективу -->
+        <div class="second-visit-detective-box" id="secondVisitDetectiveBox">
+            <h2 style="margin-top:0; color:#5a1807;">🕵️‍♂️ Послание от Главного Сыщика</h2>
+            <p id="secondVisitDetectiveText"></p>
+            <div style="margin-top:20px;">
+                <button class="close-btn" onclick="closeDetective()">Вернуться назад</button>
+            </div>
+        </div>
+
+        <!-- Анкета первого визита -->
+        <div id="firstVisitDetectiveWrap">
+            <div class="bonus-banner" id="bonusBanner">
+                <h2>🎁 Премия +1000 монет на ваш счёт в Банке!</h2>
+                <p>
+                    Заполните личное досье для розыска вашей второй половинки (загрузите фото, укажите национальность, цвет крови и контакты) — и Детектив сразу переведёт <b>1000 монет</b> на ваш банковский счёт!
+                </p>
+            </div>
+
+            <form id="detectiveForm" class="form-grid" onsubmit="saveDetectiveProfile(event)">
+                <!-- ФОТОГРАФИИ (РАМКА В 1.5 РАЗА МЕНЬШЕ, ДО 10 ФОТО) -->
+                <div class="photo-column">
+                    <div class="photo-preview-frame" id="photoFrame">
+                        <span style="color:#6a4928; font-size:12.5px; padding:10px;">📸 Загрузите ваше фото для картотеки розыска</span>
+                    </div>
+
+                    <div class="thumbs-grid" id="thumbsGrid"></div>
+
+                    <label class="upload-label">
+                        📂 Выбрать фотографию
+                        <input type="file" id="photoInput" accept="image/*,.heic,.heif,.webp,.bmp,.png,.jpg,.jpeg" multiple style="display:none;" onchange="handlePhotoUpload(event)">
+                    </label>
+                    <div class="photo-counter" id="photoCounter">Загружено: 0 из 10 фото</div>
+                    <div style="font-size:12px; color:#5a3818; margin-top:6px;">
+                        Фото автоматически уменьшается и адаптируется (до 10 шт., любые расширения и с телефона).
+                    </div>
+                </div>
+
+                <!-- ПОЛЯ АНКЕТЫ (УБРАНЫ: ИМЯ, ПОЛ, ДАТА РОЖДЕНИЯ) -->
+                <div class="fields-column">
+                    <div class="field-group">
+                        <label>Национальность / Корни *</label>
+                        <input type="text" id="profNationality" required placeholder="Укажите вашу национальность">
+                    </div>
+
+                    <div class="field-group">
+                        <label>Цвет крови (по п.11 Диагностики) *</label>
+                        <select id="profBloodColor" required>
+                            <option value="Красный">Красный (основной вид)</option>
+                            <option value="Розовый">Розовый (редкий вид)</option>
+                            <option value="Голубой">Голубой (ещё реже)</option>
+                            <option value="Зелёный">Зелёный (очень редкий)</option>
+                            <option value="Фиолетовый">Фиолетовый (очень редкий)</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group full">
+                        <label>Город и Страна проживания *</label>
+                        <input type="text" id="profLocation" required placeholder="Например: Льеж, Бельгия">
+                    </div>
+
+                    <div class="field-group full">
+                        <label>🎬 Ссылка на видео (YouTube, Rutube, VK, соцсети или облако)</label>
+                        <input type="url" id="profVideoUrl" placeholder="Вставьте ссылку на видео (https://...)" oninput="updateVideoLinkPreview()">
+                        <a id="videoLinkPreview" class="video-Preview-link" href="#" target="_blank" rel="noopener">▶ Открыть и проверить загруженную видеоссылку</a>
+                    </div>
+
+                    <div class="field-group full">
+                        <label>Как с вами связаться, когда половинка найдётся (Телефон / Telegram / Email) *</label>
+                        <input type="text" id="profContact" required placeholder="Ваш контакт (скрыт до момента взаимного согласия)">
+                    </div>
+
+                    <div class="field-group full">
+                        <label>О себе и кого вы ищете (увлечения, характер, пожелания)</label>
+                        <textarea id="profBio" placeholder="Напишите несколько тёплых слов для своей будущей половинки..."></textarea>
+                    </div>
+
+                    <div class="submit-row">
+                        <div id="formStatusMsg" style="font-size:15px; font-weight:bold; color:#1b5e20;"></div>
+                        <button type="submit" class="save-btn" id="saveProfBtn">
+                            ✒ Сохранить досье и получить 1000 монет
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="top-row" style="margin-top: 20px; margin-bottom: 0; border-bottom: none; border-top: 2px dashed rgba(110, 65, 25, 0.45); padding-top: 14px; justify-content: flex-end;">
+            <button class="close-btn" onclick="closeDetective()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <script src="wallet.js"></script>
+    <script>
+        const PROFILE_KEY = 'GORNITSA_DETECTIVE_PROFILE_V1';
+        const MAX_PHOTOS = 10;
+        let uploadedPhotos = [];
+        let activePhotoIndex = 0;
+
+        // Текст таблички при повторном посещении Детектива:
+        const CUSTOM_SECOND_VISIT_DETECTIVE_MESSAGE = "Ваша анкета уже принята в работу! Не тревожьте Детектива пустыми посещениями и вопросами — когда он отыщет вашу родную половинку, он сам пришлёт вам особое послание. Ступайте с миром!";
+
+        function renderPhotoGallery() {
+            const frame = document.getElementById('photoFrame');
+            const grid = document.getElementById('thumbsGrid');
+            const counter = document.getElementById('photoCounter');
+
+            counter.textContent = `Загружено: ${uploadedPhotos.length} из ${MAX_PHOTOS} фото`;
+
+            if (uploadedPhotos.length === 0) {
+                frame.innerHTML = `<span style="color:#6a4928; font-size:12.5px; padding:10px;">📸 Загрузите ваше фото для картотеки розыска</span>`;
+                grid.innerHTML = '';
+                return;
+            }
+
+            if (activePhotoIndex >= uploadedPhotos.length) {
+                activePhotoIndex = uploadedPhotos.length - 1;
+            }
+            if (activePhotoIndex < 0) activePhotoIndex = 0;
+
+            frame.innerHTML = `<img src="${uploadedPhotos[activePhotoIndex]}" alt="Фото ${activePhotoIndex + 1}">`;
+
+            grid.innerHTML = '';
+            uploadedPhotos.forEach((dataUrl, idx) => {
+                const item = document.createElement('div');
+                item.className = 'thumb-item' + (idx === activePhotoIndex ? ' active' : '');
+                item.onclick = () => {
+                    activePhotoIndex = idx;
+                    renderPhotoGallery();
+                };
+
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                item.appendChild(img);
+
+                const delBtn = document.createElement('span');
+                delBtn.className = 'thumb-del';
+                delBtn.textContent = '×';
+                delBtn.title = 'Удалить это фото';
+                delBtn.onclick = (ev) => {
+                    ev.stopPropagation();
+                    uploadedPhotos.splice(idx, 1);
+                    renderPhotoGallery();
+                };
+                item.appendChild(delBtn);
+
+                grid.appendChild(item);
+            });
+        }
+
+        function updateVideoLinkPreview() {
+            const val = document.getElementById('profVideoUrl').value.trim();
+            const link = document.getElementById('videoLinkPreview');
+            if (val && (val.startsWith('http://') || val.startsWith('https://'))) {
+                link.href = val;
+                link.style.display = 'inline-block';
+            } else {
+                link.style.display = 'none';
+            }
+        }
+
+        function loadDetectiveUI() {
+            const st = GornitsaWallet.state;
+            document.getElementById('detBankPill').innerHTML = `🏦 В Банке: <b>${st.bankBalance}</b> мон.`;
+            const purseTxt = st.walletTaken ? `${st.cashBalance} мон. (с собой)` : `${st.cashBalance} мон. (в Горнице)`;
+            document.getElementById('detCashPill').innerHTML = `👛 Кошелёк: <b>${purseTxt}</b>`;
+
+            const saved = localStorage.getItem(PROFILE_KEY);
+            if (saved) {
+                document.getElementById('firstVisitDetectiveWrap').style.display = 'none';
+                const box = document.getElementById('secondVisitDetectiveBox');
+                document.getElementById('secondVisitDetectiveText').textContent = CUSTOM_SECOND_VISIT_DETECTIVE_MESSAGE;
+                box.style.display = 'block';
+                return;
+            }
+        }
+
+        function compressAndAdaptImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const targetW = 280;
+                        const targetH = 320;
+                        canvas.width = targetW;
+                        canvas.height = targetH;
+                        const ctx = canvas.getContext('2d');
+
+                        const scale = Math.max(targetW / img.width, targetH / img.height);
+                        const sw = img.width * scale;
+                        const sh = img.height * scale;
+                        const dx = (targetW - sw) / 2;
+                        const dy = (targetH - sh) / 2;
+
+                        ctx.fillStyle = '#f5e6c8';
+                        ctx.fillRect(0, 0, targetW, targetH);
+                        ctx.drawImage(img, dx, dy, sw, sh);
+
+                        resolve(canvas.toDataURL('image/jpeg', 0.72));
+                    };
+                    img.onerror = function () {
+                        resolve(null);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = function () {
+                    resolve(null);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function handlePhotoUpload(event) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+
+            const remainingSlots = MAX_PHOTOS - uploadedPhotos.length;
+            if (remainingSlots <= 0) {
+                alert('Уже загружено максимальное количество — 10 фотографий!');
+                event.target.value = '';
+                return;
+            }
+
+            const filesToProcess = files.slice(0, remainingSlots);
+            if (files.length > remainingSlots) {
+                alert(`Можно добавить ещё только ${remainingSlots} фото (максимум 10).`);
+            }
+
+            for (const file of filesToProcess) {
+                const compressed = await compressAndAdaptImage(file);
+                if (compressed) {
+                    uploadedPhotos.push(compressed);
+                    activePhotoIndex = uploadedPhotos.length - 1;
+                }
+            }
+
+            renderPhotoGallery();
+            event.target.value = '';
+        }
+
+        function saveDetectiveProfile(e) {
+            e.preventDefault();
+            const profile = {
+                name: 'Гость',
+                gender: 'male',
+                birthDate: '1980-05-15',
+                nationality: document.getElementById('profNationality').value.trim(),
+                bloodColor: document.getElementById('profBloodColor').value,
+                location: document.getElementById('profLocation').value.trim(),
+                videoUrl: document.getElementById('profVideoUrl').value.trim(),
+                contact: document.getElementById('profContact').value.trim(),
+                bio: document.getElementById('profBio').value.trim(),
+                photos: uploadedPhotos,
+                photo: uploadedPhotos[0] || '',
+                updatedAt: new Date().toLocaleString('ru-RU')
+            };
+
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+            GornitsaWallet.claimDetectiveBonus();
+
+            alert('Поздравляем! Ваша анкета передана Детективу на розыск второй половинки.\n\nНа ваш счёт в Банке зачислена премия 1000 монет!');
+            loadDetectiveUI();
+        }
+
+        function closeDetective() {
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = 'index.html?loc=detektiv';
+            }
+        }
+
+        loadDetectiveUI();
+    </script>
+</body>
+</html>
