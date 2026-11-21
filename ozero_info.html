@@ -243,11 +243,11 @@
     </div>
 
     <!-- Пергаментный свиток -->
-    <div class="parchment-overlay active" id="infoScrollOverlay" onclick="if(event.target === this) closeInfoScroll()">
+    <div class="parchment-overlay active" id="infoScrollOverlay" onclick="if(event.target === this) closeInfoScroll(event)">
         <div class="parchment-scroll" id="infoScrollBox">
             
             <div class="parchment-btn-row top-row">
-                <button class="parchment-close-btn" onclick="closeInfoScroll()">ЗАКРЫТЬ</button>
+                <button class="parchment-close-btn" onclick="closeInfoScroll(event)">ЗАКРЫТЬ</button>
             </div>
 
             <div class="parchment-content">
@@ -315,7 +315,7 @@
             </div>
 
             <div class="parchment-btn-row bottom-row">
-                <button class="parchment-close-btn" onclick="closeInfoScroll()">ЗАКРЫТЬ</button>
+                <button class="parchment-close-btn" onclick="closeInfoScroll(event)">ЗАКРЫТЬ</button>
             </div>
 
         </div>
@@ -341,16 +341,22 @@
             }
         }
 
-        function closeInfoScroll() {
+        function closeInfoScroll(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             var ov = document.getElementById('infoScrollOverlay');
             if (ov) ov.classList.remove('active');
-            if (window.opener) {
-                window.close();
+            var returnContext = new URLSearchParams(window.location.search).get('return');
+            if (returnContext === 'lake' || returnContext === 'yaga-lake') {
+                sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero');
+                sessionStorage.setItem('GORNITSA_SCENE_CLICK_LOCK', '1');
+                window.location.replace('index.html?loc=ozero');
                 return;
             }
-            if (new URLSearchParams(window.location.search).get('return') === 'lake') {
-                sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero');
-                window.location.replace('index.html?loc=ozero');
+            if (window.opener) {
+                window.close();
             }
         }
 

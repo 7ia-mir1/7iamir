@@ -645,7 +645,7 @@
             </div>
 
             <!-- Точка 2: Нажатие на Бабу-Ягу -> снова открывает чат с сохранённой перепиской -->
-            <div class="scene-hotspot" style="left: 80%; top: 60%; width: 20%; height: 36%;" onclick="reopenChatFromTelega()">
+            <div class="scene-hotspot" style="left: 79%; top: 56%; width: 9%; height: 13%;" onclick="reopenChatFromTelega()">
                 <div class="hotspot-glow"></div>
                 <div class="hotspot-caption">🧙‍♀️ Баба-Яга (Открыть чат)</div>
             </div>
@@ -682,7 +682,7 @@
             </div>
 
             <!-- 2. Резной рекламный стенд-афиша «Информация» рядом с домиком -->
-            <div class="scene-hotspot" style="left: 49.5%; top: 59%; width: 20%; height: 24%;" onclick="openOzeroModal('Информация: О диагностике и рекомендации', 'На большом резном стенде представлены правила многофакторной диагностики взаимоотношений: оценка духовного, душевного и телесного созвучия пары, астрологические и природные соответствия, а также добрые советы для укрепления союза.')">
+            <div class="scene-hotspot" style="left: 49.5%; top: 59%; width: 20%; height: 24%;" onclick="openOzeroInfoPage()">
                 <div class="hotspot-glow"></div>
                 <div class="hotspot-caption">📜 Информация</div>
             </div>
@@ -706,7 +706,7 @@
                 <h2 id="ozeroModalTitle">Справочное бюро</h2>
                 <p id="ozeroModalText"></p>
                 <div id="ozeroModalChoices" class="scene-modal-choices"></div>
-                <button class="scene-modal-close" onclick="closeOzeroModal()">Закрыть</button>
+                <button class="scene-modal-close" onclick="closeOzeroModal(event)">Закрыть</button>
             </div>
         </div>
     </div>
@@ -1310,6 +1310,9 @@
             document.getElementById('roadSceneOverlay').style.display = 'none';
             document.getElementById('ozeroSceneOverlay').style.display = 'none';
             document.getElementById('ploshadSceneOverlay').style.display = 'none';
+            document.querySelectorAll('.scene-modal.active').forEach(function(modal) {
+                modal.classList.remove('active');
+            });
         }
 
         function finishConversation() {
@@ -1426,7 +1429,7 @@
             hideAllSceneOverlays();
 
             if (currentRoadTarget === 'ozero') {
-                showOzeroScene();
+                goToMainIndexLoc('ozero');
             } else if (currentRoadTarget === 'ploshad') {
                 goToMainIndexLoc('ploshad');
             } else if (currentRoadTarget === 'yaga') {
@@ -1438,6 +1441,7 @@
 
         function showOzeroScene() {
             hideAllSceneOverlays();
+            closeOzeroModal();
             var ozeroOverlay = document.getElementById('ozeroSceneOverlay');
             var ozeroStage = document.getElementById('ozeroStage');
             var ozeroFeather = document.getElementById('ozeroFeatherBtn');
@@ -1463,6 +1467,11 @@
             var choicesBox = document.getElementById('ozeroModalChoices');
             if (choicesBox) choicesBox.innerHTML = '';
             document.getElementById('ozeroInfoModal').classList.add('active');
+        }
+
+        function openOzeroInfoPage() {
+            sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero');
+            window.location.href = 'ozero_info.html?return=yaga-lake';
         }
 
         function openOzeroCartChoiceModal() {
@@ -1494,8 +1503,13 @@
             document.getElementById('ozeroInfoModal').classList.add('active');
         }
 
-        function closeOzeroModal() {
+        function closeOzeroModal(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             document.getElementById('ozeroInfoModal').classList.remove('active');
+            document.getElementById('ozeroModalChoices').innerHTML = '';
         }
 
         // Модальные окна на сцене Райцентр (Площадь)

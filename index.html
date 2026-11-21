@@ -244,7 +244,7 @@
             <h2 id="modalTitle">Свиток</h2>
             <p id="modalText">Содержимое свитка...</p>
             <div id="modalChoices" class="choice-buttons"></div>
-            <button class="close-modal" onclick="closeModal()">Закрыть</button>
+            <button class="close-modal" onclick="closeModal(event)">Закрыть</button>
         </div>
     </div>
 
@@ -303,6 +303,7 @@
         let hoveredZone = null;
         let animTime = 0;
         let travelTimer = null;
+        let sceneClicksBlockedUntil = 0;
 
         let apparitionAlpha = 0;
         let heartHovered = false;
@@ -499,9 +500,10 @@
                 { id: 'trud_upr', fx: 0.54, fy: 0.52, r: 56, label: "Табель (22/30), Ссылка и Идеи", type: 'nav', action: () => { sessionStorage.setItem('GORNITSA_LAST_LOC', 'trud'); window.location.href = 'trud.html'; } }
             ],
             ozero: [
-                { id: 'oz_telega', fx: 0.25, fy: 0.63, r: 54, label: "Лошадь с телегой", type: 'nav', action: () => showChoiceModal("Куда едем?", "Выберите направление пути от озера Лесовика:", [
-                    { text: "🏛️ На площадь (в Райцентр)", onClick: () => startRoadTravel(getRoadKey('doroga_les_obra'), 'ploshad') },
-                    { text: "🎃 К Бабе-Яге (в чащу)", onClick: () => startRoadTravel(getRoadKey('doroga_zveri'), 'yaga') }
+                { id: 'oz_telega', fx: 0.25, fy: 0.63, r: 54, label: "Лошадь с телегой", type: 'nav', action: () => showChoiceModal("Путь от Озера", "Выберите маршрут от озера Лесовика:", [
+                    { text: "🏛️ На Площадь", onClick: () => startRoadTravel(getRoadKey('doroga_les_obra'), 'ploshad') },
+                    { text: "🎃 К Бабе Яге в чащу", onClick: () => openYagaWithCashCheck() },
+                    { text: "Остаться", onClick: () => {} }
                 ]) },
                 { id: 'oz_stend', fx: 0.495, fy: 0.59, r: 68, label: "Информация (Свиток)", type: 'nav', drawStand: false, action: () => { sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.href = 'ozero_info.html?return=lake'; } },
                 { id: 'oz_lesovik', fx: 0.70, fy: 0.50, r: 50, label: "Леший: Диагностика (20 монет)", type: 'nav', action: () => openLeshiyDiagnostics() },
@@ -512,7 +514,7 @@
                 { id: 'yaga_telega_zone', fx: 0.26, fy: 0.64, r: 56, label: "Телега с лошадью (Уехать)", type: 'nav', onlyWhenCart: true, action: () => showChoiceModal("Путь от Бабы-Яги", "Чары рассеялись — телега и лошадь снова готовы в путь! Куда едем?", [
                     { text: "🌊 Назад к Лешему (на Озеро)", onClick: () => startRoadTravel(getRoadKey('doroga_zveri_obra'), 'ozero') }
                 ]) },
-                { id: 'yaga_baba', fx: 0.72, fy: 0.56, r: 52, label: "Баба-Яга (Беседа)", type: 'info', action: () => openYagaWithCashCheck() }
+                { id: 'yaga_baba', fx: 0.61, fy: 0.42, fxWhenCartReady: 0.79, fyWhenCartReady: 0.56, hitboxWidth: 0.09, hitboxHeight: 0.13, r: 52, label: "Баба-Яга (Беседа)", type: 'info', action: () => openYagaWithCashCheck() }
             ]
         };
 
@@ -524,12 +526,18 @@
                     if (parsed[loc]) {
                         defaultZoneCoords[loc].forEach(z => {
                             if (parsed[loc][z.id]) {
-                                const sfx = Number(parsed[loc][z.id].fx);
-                                const sfy = Number(parsed[loc][z.id].fy);
-                                if (Number.isFinite(sfx) && Number.isFinite(sfy) && sfx >= 0.02 && sfx <= 0.98 && sfy >= 0.04 && sfy <= 0.96) {
-                                    z.fx = sfx;
-                                    z.fy = sfy;
-                                }
+                                const savedZone = parsed[loc][z.id];
+                                [['fx', 'fy'], ['fxWhenCartReady', 'fyWhenCartReady']].forEach(([fxKey, fyKey]) => {
+                                    const sfx = Number(savedZone[fxKey]);
+                                    const sfy = Number(savedZone[fyKey]);
+                                    const isLegacyYagaDefault = z.id === 'yaga_baba' &&
+                                        fxKey === 'fx' && sfx === 0.72 && sfy === 0.56;
+                                    if (!isLegacyYagaDefault && Number.isFinite(sfx) && Number.isFinite(sfy) &&
+                                        sfx >= 0.02 && sfx <= 0.98 && sfy >= 0.04 && sfy <= 0.96) {
+                                        z[fxKey] = sfx;
+                                        z[fyKey] = sfy;
+                                    }
+                                });
                             }
                         });
                     }
@@ -543,7 +551,12 @@
                 for (let loc in defaultZoneCoords) {
                     toSave[loc] = {};
                     defaultZoneCoords[loc].forEach(z => {
-                        toSave[loc][z.id] = { fx: z.fx, fy: z.fy };
+                        toSave[loc][z.id] = {
+                            fx: z.fx,
+                            fy: z.fy,
+                            fxWhenCartReady: z.fxWhenCartReady,
+                            fyWhenCartReady: z.fyWhenCartReady
+                        };
                     });
                 }
                 localStorage.setItem('gornitsa_zone_coords_v10', JSON.stringify(toSave));
@@ -604,7 +617,45 @@
             if (fBtn) fBtn.classList.remove('active-feather');
         }
 
+        function initializeOzeroScene() {
+            if (travelTimer) {
+                clearTimeout(travelTimer);
+                travelTimer = null;
+            }
+            if (sessionStorage.getItem('GORNITSA_SCENE_CLICK_LOCK') === '1') {
+                sceneClicksBlockedUntil = Date.now() + 300;
+                sessionStorage.removeItem('GORNITSA_SCENE_CLICK_LOCK');
+            }
+            currentLoc = 'ozero';
+            sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero');
+            hoveredZone = null;
+            heartHovered = false;
+            draggingZone = null;
+            canvas.style.cursor = 'default';
+
+            const modal = document.getElementById('infoModal');
+            if (modal) modal.classList.remove('active');
+            const choices = document.getElementById('modalChoices');
+            if (choices) choices.innerHTML = '';
+            document.querySelectorAll('.book-modal-overlay.active, .toc-separate-overlay.active').forEach(overlay => {
+                overlay.classList.remove('active');
+            });
+
+            if (window.GornitsaMedia && typeof GornitsaMedia.onLocationChange === 'function') {
+                GornitsaMedia.onLocationChange('ozero');
+                GornitsaMedia.stopBackgroundMusic();
+            }
+            const mediaModal = document.getElementById('gornitsaMediaModal');
+            if (mediaModal) mediaModal.remove();
+            resetFeatherLabelsOnNewScreen();
+            updateNavHighlight();
+        }
+
         function switchLocation(loc) {
+            if (loc === 'ozero') {
+                initializeOzeroScene();
+                return;
+            }
             if (travelTimer) {
                 clearTimeout(travelTimer);
                 travelTimer = null;
@@ -664,7 +715,9 @@
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
                 btn.innerText = c.text;
-                btn.onclick = () => {
+                btn.onclick = (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     closeModal();
                     c.onClick();
                 };
@@ -673,8 +726,13 @@
             document.getElementById('infoModal').classList.add('active');
         }
 
-        function closeModal() {
+        function closeModal(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             document.getElementById('infoModal').classList.remove('active');
+            document.getElementById('modalChoices').innerHTML = '';
         }
 
         function getRoadKey(baseRoadName) {
@@ -720,22 +778,40 @@
                 return true;
             });
             const rect = getImageRenderRect(getCurrentBgImage());
-            return filtered.map(z => ({
-                ref: z,
-                x: rect.x + z.fx * rect.w,
-                y: Math.max(60, Math.min(canvas.height - 45, rect.y + z.fy * rect.h)),
-                r: z.r,
-                label: z.label,
-                type: z.type,
-                cursor: z.cursor,
-                drawSeamlessDoor: z.drawSeamlessDoor,
-                drawStand: z.drawStand,
-                archSign: z.archSign,
-                signX: z.signFx ? rect.x + z.signFx * rect.w : null,
-                signY: z.signFy ? rect.y + z.signFy * rect.h : null,
-                signAngle: z.signAngle || 0,
-                action: z.action
-            }));
+            const useCartImage = currentLoc === 'yaga' && yagaCartReady &&
+                images['yaga_telega'] && images['yaga_telega'].complete &&
+                images['yaga_telega'].naturalWidth !== 0;
+            return filtered.map(z => {
+                const fx = z.id === 'yaga_baba' && useCartImage
+                    ? z.fxWhenCartReady
+                    : z.fx;
+                const fy = z.id === 'yaga_baba' && useCartImage
+                    ? z.fyWhenCartReady
+                    : z.fy;
+                const hitbox = z.hitboxWidth && z.hitboxHeight ? {
+                    left: rect.x + (fx - z.hitboxWidth / 2) * rect.w,
+                    right: rect.x + (fx + z.hitboxWidth / 2) * rect.w,
+                    top: rect.y + (fy - z.hitboxHeight / 2) * rect.h,
+                    bottom: rect.y + (fy + z.hitboxHeight / 2) * rect.h
+                } : null;
+                return {
+                    ref: z,
+                    x: rect.x + fx * rect.w,
+                    y: Math.max(60, Math.min(canvas.height - 45, rect.y + fy * rect.h)),
+                    r: z.r,
+                    hitbox,
+                    label: z.label,
+                    type: z.type,
+                    cursor: z.cursor,
+                    drawSeamlessDoor: z.drawSeamlessDoor,
+                    drawStand: z.drawStand,
+                    archSign: z.archSign,
+                    signX: z.signFx ? rect.x + z.signFx * rect.w : null,
+                    signY: z.signFy ? rect.y + z.signFy * rect.h : null,
+                    signAngle: z.signAngle || 0,
+                    action: z.action
+                };
+            });
         }
 
         function drawEtherealHeartApparition(img, rect) {
@@ -1084,7 +1160,9 @@
                 const z = zones[i];
                 const dist = Math.hypot(x - z.x, y - z.y);
                 const inLabelBox = (magicViewActive || editMode) && Math.abs(x - z.x) <= 75 && Math.abs(y - z.y) <= 18;
-                if (dist <= z.r || inLabelBox) {
+                const inHitbox = z.hitbox && x >= z.hitbox.left && x <= z.hitbox.right &&
+                    y >= z.hitbox.top && y <= z.hitbox.bottom;
+                if (inHitbox || (!z.hitbox && dist <= z.r) || inLabelBox) {
                     return z;
                 }
             }
@@ -1098,8 +1176,18 @@
 
             if (editMode && draggingZone) {
                 const imgRect = getImageRenderRect(getCurrentBgImage());
-                draggingZone.fx = Math.max(0.03, Math.min(0.97, (x - imgRect.x) / imgRect.w));
-                draggingZone.fy = Math.max(0.06, Math.min(0.94, (y - imgRect.y) / imgRect.h));
+                const fx = Math.max(0.03, Math.min(0.97, (x - imgRect.x) / imgRect.w));
+                const fy = Math.max(0.06, Math.min(0.94, (y - imgRect.y) / imgRect.h));
+                const cartImageActive = draggingZone.id === 'yaga_baba' && yagaCartReady &&
+                    images['yaga_telega'] && images['yaga_telega'].complete &&
+                    images['yaga_telega'].naturalWidth !== 0;
+                if (cartImageActive) {
+                    draggingZone.fxWhenCartReady = fx;
+                    draggingZone.fyWhenCartReady = fy;
+                } else {
+                    draggingZone.fx = fx;
+                    draggingZone.fy = fy;
+                }
                 saveCustomCoords();
                 canvas.style.cursor = 'grabbing';
                 return;
@@ -1141,6 +1229,11 @@
         });
 
         canvas.addEventListener('click', (e) => {
+            if (Date.now() < sceneClicksBlockedUntil) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             if (editMode) return;
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -1180,7 +1273,11 @@
                     currentLoc = startLoc;
                 }
             } catch (e) {}
-            updateNavHighlight();
+            if (currentLoc === 'ozero') {
+                initializeOzeroScene();
+            } else {
+                updateNavHighlight();
+            }
         }
 
         restoreLocationFromUrlOrHistory();
