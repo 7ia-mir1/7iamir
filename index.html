@@ -1902,29 +1902,111 @@
             border-radius: 0;
             padding: 0;
         }
-        .online-chat-close-btn {
+        .online-chat-modal-box.windowed {
+            inset: auto;
+            top: 16vh;
+            left: 16vw;
+            width: 68vw;
+            height: 68vh;
+            min-width: min(320px, 100vw);
+            min-height: min(240px, 100vh);
+            max-width: calc(100vw - 6px);
+            max-height: calc(100vh - 6px);
+            resize: both;
+            overflow: hidden;
+            border: 3px solid #e8c15a;
+            border-radius: 8px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.88), 0 0 18px rgba(232, 193, 90, 0.55);
+        }
+        .online-chat-window-controls {
             position: absolute;
             top: 3px;
             right: 3px;
             z-index: 10010;
-            background: linear-gradient(180deg, #9e2a1f 0%, #63160e 100%);
-            color: #ffe8b3;
-            border: 2.5px solid #ffd700;
-            border-radius: 50%;
-            width: clamp(28px, 3.2vw, 42px);
-            height: clamp(28px, 3.2vw, 42px);
-            font-size: clamp(14px, 1.5vw, 20px);
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.85);
             display: flex;
             align-items: center;
-            justify-content: center;
-            transition: transform 0.15s ease;
+            gap: 4px;
         }
-        .online-chat-close-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 15px #ffd700;
+        .online-chat-drag-strip {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 150px;
+            z-index: 10005;
+            height: 12px;
+            cursor: grab;
+            touch-action: none;
+        }
+        .online-chat-modal-box.windowed .online-chat-drag-strip {
+            display: block;
+        }
+        .online-chat-modal-box.is-dragging .online-chat-drag-strip {
+            cursor: grabbing;
+        }
+        .online-chat-control-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(28px, 3.2vw, 42px);
+            height: clamp(28px, 3.2vw, 42px);
+            padding: 0;
+            border: 2px solid #e8c15a;
+            border-radius: 50%;
+            background: linear-gradient(180deg, #9b7132 0%, #50310f 100%);
+            color: #fff6dc;
+            font-size: clamp(16px, 1.7vw, 22px);
+            font-weight: 700;
+            line-height: 1;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
+        }
+        .online-chat-control-btn:hover,
+        .online-chat-control-btn:focus-visible {
+            filter: brightness(1.2);
+            outline: 2px solid #fff0b7;
+            outline-offset: 1px;
+        }
+        .online-chat-control-btn.move {
+            cursor: grab;
+            touch-action: none;
+        }
+        .online-chat-control-btn.move:active {
+            cursor: grabbing;
+        }
+        .online-chat-control-btn.close {
+            border-color: #ffd700;
+            background: linear-gradient(180deg, #a83227 0%, #63160e 100%);
+            font-size: clamp(14px, 1.5vw, 20px);
+        }
+        .online-chat-control-tooltip {
+            position: absolute;
+            top: calc(100% + 7px);
+            right: 0;
+            z-index: 9999;
+            padding: 6px 10px;
+            border: 1px solid #e8c15a;
+            border-radius: 6px;
+            background: #321d0c;
+            color: #fff6dc;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.2;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75);
+        }
+        .online-chat-control-btn:hover .online-chat-control-tooltip,
+        .online-chat-control-btn:focus-visible .online-chat-control-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        .online-chat-close-btn {
+            flex: 0 0 auto;
         }
         .online-chat-iframe {
             display: block;
@@ -1940,15 +2022,52 @@
 
     <div class="online-chat-modal-overlay" id="onlineChatModalOverlay" onclick="if(event.target===this) closeOnlineChatModal()">
         <div class="online-chat-modal-box">
-            <button class="online-chat-close-btn" onclick="closeOnlineChatModal()" title="Закрыть чат и вернуться во Двор">✕</button>
+            <div class="online-chat-window-controls" aria-label="Управление окном чата">
+                <button type="button" class="online-chat-control-btn move" id="onlineChatMoveBtn" aria-label="Перемещать">
+                    <span aria-hidden="true">✥</span><span class="online-chat-control-tooltip">Перемещать</span>
+                </button>
+                <button type="button" class="online-chat-control-btn toggle" id="onlineChatToggleBtn" aria-label="Сжать">
+                    <span class="online-chat-control-icon" aria-hidden="true">⤡</span><span class="online-chat-control-tooltip">Сжать</span>
+                </button>
+                <button type="button" class="online-chat-control-btn close online-chat-close-btn" id="onlineChatCloseBtn" aria-label="Закрыть" onclick="closeOnlineChatModal()">
+                    <span aria-hidden="true">✕</span><span class="online-chat-control-tooltip">Закрыть</span>
+                </button>
+            </div>
+            <div class="online-chat-drag-strip" aria-hidden="true"></div>
             <iframe id="onlineChatIframe" src="chat_7ia_mir.html" class="online-chat-iframe" title="Чат Семья-Мир"></iframe>
         </div>
     </div>
 
     <script>
+        function setOnlineChatWindowed(windowed) {
+            const box = document.querySelector('.online-chat-modal-box');
+            const toggleBtn = document.getElementById('onlineChatToggleBtn');
+            if (!box || !toggleBtn) return;
+
+            box.style.left = '';
+            box.style.top = '';
+            box.style.width = '';
+            box.style.height = '';
+            box.classList.toggle('windowed', windowed);
+
+            const icon = toggleBtn.querySelector('.online-chat-control-icon');
+            const tooltip = toggleBtn.querySelector('.online-chat-control-tooltip');
+            const label = windowed ? 'Развернуть' : 'Сжать';
+            if (icon) icon.textContent = windowed ? '⤢' : '⤡';
+            if (tooltip) tooltip.textContent = label;
+            toggleBtn.setAttribute('aria-label', label);
+
+            if (windowed) {
+                const rect = box.getBoundingClientRect();
+                box.style.left = `${Math.max(0, (window.innerWidth - rect.width) / 2)}px`;
+                box.style.top = `${Math.max(0, (window.innerHeight - rect.height) / 2)}px`;
+            }
+        }
+
         function openOnlineChatModal() {
             const ov = document.getElementById('onlineChatModalOverlay');
             const ifr = document.getElementById('onlineChatIframe');
+            setOnlineChatWindowed(false);
             if (ifr && (!ifr.getAttribute('src') || ifr.getAttribute('src') === '')) {
                 ifr.setAttribute('src', 'chat_7ia_mir.html');
             }
@@ -1958,10 +2077,87 @@
         }
         function closeOnlineChatModal() {
             const ov = document.getElementById('onlineChatModalOverlay');
+            setOnlineChatWindowed(false);
             if (ov) {
                 ov.classList.remove('active');
             }
         }
+
+        (function setupOnlineChatWindowControls() {
+            const box = document.querySelector('.online-chat-modal-box');
+            const moveBtn = document.getElementById('onlineChatMoveBtn');
+            const toggleBtn = document.getElementById('onlineChatToggleBtn');
+            if (!box || !moveBtn || !toggleBtn) return;
+
+            let dragState = null;
+            const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+
+            function beginDrag(event) {
+                if (event.button !== 0) return;
+                const wasFullScreen = !box.classList.contains('windowed');
+                const pointerWithinX = event.clientX - moveBtn.getBoundingClientRect().left;
+                const pointerWithinY = event.clientY - moveBtn.getBoundingClientRect().top;
+                if (wasFullScreen) {
+                    setOnlineChatWindowed(true);
+                    const boxRect = box.getBoundingClientRect();
+                    const buttonRect = moveBtn.getBoundingClientRect();
+                    const localButtonX = buttonRect.left - boxRect.left;
+                    const localButtonY = buttonRect.top - boxRect.top;
+                    const nextLeft = event.clientX - localButtonX - pointerWithinX;
+                    const nextTop = event.clientY - localButtonY - pointerWithinY;
+                    box.style.left = `${clamp(nextLeft, 0, window.innerWidth - boxRect.width)}px`;
+                    box.style.top = `${clamp(nextTop, 0, window.innerHeight - boxRect.height)}px`;
+                }
+
+                const rect = box.getBoundingClientRect();
+                dragState = {
+                    pointerId: event.pointerId,
+                    offsetX: event.clientX - rect.left,
+                    offsetY: event.clientY - rect.top
+                };
+                if (event.currentTarget.setPointerCapture) {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                }
+                box.classList.add('is-dragging');
+                event.preventDefault();
+            }
+
+            function continueDrag(event) {
+                if (!dragState || event.pointerId !== dragState.pointerId) return;
+                const rect = box.getBoundingClientRect();
+                const left = clamp(event.clientX - dragState.offsetX, 0, window.innerWidth - rect.width);
+                const top = clamp(event.clientY - dragState.offsetY, 0, window.innerHeight - rect.height);
+                box.style.left = `${left}px`;
+                box.style.top = `${top}px`;
+            }
+
+            function endDrag(event) {
+                if (!dragState || (event && event.pointerId !== dragState.pointerId)) return;
+                dragState = null;
+                box.classList.remove('is-dragging');
+            }
+
+            moveBtn.addEventListener('pointerdown', beginDrag);
+            box.addEventListener('pointerdown', (event) => {
+                if (!box.classList.contains('windowed') || event.target.closest('.online-chat-window-controls')) return;
+                if (event.clientY - box.getBoundingClientRect().top <= 12) beginDrag(event);
+            });
+            document.addEventListener('pointermove', continueDrag);
+            document.addEventListener('pointerup', endDrag);
+            document.addEventListener('pointercancel', endDrag);
+
+            toggleBtn.addEventListener('click', () => {
+                setOnlineChatWindowed(!box.classList.contains('windowed'));
+            });
+
+            window.addEventListener('resize', () => {
+                if (!box.classList.contains('windowed')) return;
+                const rect = box.getBoundingClientRect();
+                box.style.left = `${clamp(rect.left, 0, window.innerWidth - rect.width)}px`;
+                box.style.top = `${clamp(rect.top, 0, window.innerHeight - rect.height)}px`;
+            });
+        })();
+
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const ov = document.getElementById('onlineChatModalOverlay');

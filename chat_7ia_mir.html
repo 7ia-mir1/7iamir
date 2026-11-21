@@ -2258,12 +2258,126 @@
     white-space: nowrap;
   }
 
+  .izba-chat-container.windowed {
+    inset: auto;
+    top: 16vh;
+    left: 16vw;
+    width: 68vw;
+    height: 68vh;
+    min-width: min(320px, 100vw);
+    min-height: min(240px, 100vh);
+    max-width: calc(100vw - 6px);
+    max-height: calc(100vh - 6px);
+    resize: both;
+    overflow: hidden;
+    border: 3px solid #e8c15a;
+    border-radius: 8px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.88), 0 0 18px rgba(232, 193, 90, 0.55);
+  }
+
+  .izba-chat-container.is-dragging {
+    user-select: none;
+  }
+
+  .chat-window-controls {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    z-index: 10010;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .chat-window-control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(28px, 3.2vw, 42px);
+    height: clamp(28px, 3.2vw, 42px);
+    padding: 0;
+    border: 2px solid #e8c15a;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #9b7132 0%, #50310f 100%);
+    color: #fff6dc;
+    font-size: clamp(16px, 1.7vw, 22px);
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
+  }
+
+  .chat-window-control:hover,
+  .chat-window-control:focus-visible {
+    filter: brightness(1.2);
+    outline: 2px solid #fff0b7;
+    outline-offset: 1px;
+  }
+
+  .chat-window-control.move {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .chat-window-control.move:active {
+    cursor: grabbing;
+  }
+
+  .chat-window-control.close {
+    border-color: #ffd700;
+    background: linear-gradient(180deg, #a83227 0%, #63160e 100%);
+    font-size: clamp(14px, 1.5vw, 20px);
+  }
+
+  .chat-window-tooltip {
+    position: absolute;
+    top: calc(100% + 7px);
+    right: 0;
+    z-index: 9999;
+    padding: 6px 10px;
+    border: 1px solid #e8c15a;
+    border-radius: 6px;
+    background: #321d0c;
+    color: #fff6dc;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75);
+  }
+
+  .chat-window-control:hover .chat-window-tooltip,
+  .chat-window-control:focus-visible .chat-window-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  body.embedded-chat .chat-window-controls {
+    display: none;
+  }
+
 </style>
 </head>
 <body>
 
 <div class="page-wrapper">
   <div class="izba-chat-container">
+    <div class="chat-window-controls" aria-label="Управление окном чата">
+      <button type="button" class="chat-window-control move" id="chatWindowMoveBtn" aria-label="Перемещать">
+        <span aria-hidden="true">✥</span><span class="chat-window-tooltip">Перемещать</span>
+      </button>
+      <button type="button" class="chat-window-control toggle" id="chatWindowToggleBtn" aria-label="Сжать">
+        <span class="chat-window-icon" aria-hidden="true">⤡</span><span class="chat-window-tooltip">Сжать</span>
+      </button>
+      <button type="button" class="chat-window-control close" id="chatWindowCloseBtn" aria-label="Закрыть">
+        <span aria-hidden="true">✕</span><span class="chat-window-tooltip">Закрыть</span>
+      </button>
+    </div>
     <div class="chat-body">
       <!-- 1. Левая панель: Активный чат той стороны выделен максимально отчётливо -->
       <aside class="sidebar-online">
@@ -3037,6 +3151,118 @@
       emojiPopoverEl.classList.remove('open');
     }
   });
+
+  const chatWindowBox = document.querySelector('.izba-chat-container');
+  const chatWindowMoveBtn = document.getElementById('chatWindowMoveBtn');
+  const chatWindowToggleBtn = document.getElementById('chatWindowToggleBtn');
+  const chatWindowCloseBtn = document.getElementById('chatWindowCloseBtn');
+  const chatIsEmbedded = window.parent !== window;
+
+  if (chatIsEmbedded) {
+    document.body.classList.add('embedded-chat');
+  } else if (chatWindowBox && chatWindowMoveBtn && chatWindowToggleBtn) {
+    let chatWindowDrag = null;
+    const clampWindowPosition = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+
+    function setChatWindowed(windowed) {
+      chatWindowBox.style.left = '';
+      chatWindowBox.style.top = '';
+      chatWindowBox.style.width = '';
+      chatWindowBox.style.height = '';
+      chatWindowBox.classList.toggle('windowed', windowed);
+
+      const icon = chatWindowToggleBtn.querySelector('.chat-window-icon');
+      const tooltip = chatWindowToggleBtn.querySelector('.chat-window-tooltip');
+      const label = windowed ? 'Развернуть' : 'Сжать';
+      if (icon) icon.textContent = windowed ? '⤢' : '⤡';
+      if (tooltip) tooltip.textContent = label;
+      chatWindowToggleBtn.setAttribute('aria-label', label);
+
+      if (windowed) {
+        const rect = chatWindowBox.getBoundingClientRect();
+        chatWindowBox.style.left = `${Math.max(0, (window.innerWidth - rect.width) / 2)}px`;
+        chatWindowBox.style.top = `${Math.max(0, (window.innerHeight - rect.height) / 2)}px`;
+      }
+    }
+
+    function beginChatWindowDrag(event) {
+      if (event.button !== 0) return;
+      const wasFullScreen = !chatWindowBox.classList.contains('windowed');
+      const pointerWithinX = event.clientX - chatWindowMoveBtn.getBoundingClientRect().left;
+      const pointerWithinY = event.clientY - chatWindowMoveBtn.getBoundingClientRect().top;
+
+      if (wasFullScreen) {
+        setChatWindowed(true);
+        const rect = chatWindowBox.getBoundingClientRect();
+        const buttonRect = chatWindowMoveBtn.getBoundingClientRect();
+        const localButtonX = buttonRect.left - rect.left;
+        const localButtonY = buttonRect.top - rect.top;
+        const left = event.clientX - localButtonX - pointerWithinX;
+        const top = event.clientY - localButtonY - pointerWithinY;
+        chatWindowBox.style.left = `${clampWindowPosition(left, 0, window.innerWidth - rect.width)}px`;
+        chatWindowBox.style.top = `${clampWindowPosition(top, 0, window.innerHeight - rect.height)}px`;
+      }
+
+      const rect = chatWindowBox.getBoundingClientRect();
+      chatWindowDrag = {
+        pointerId: event.pointerId,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top
+      };
+      if (event.currentTarget.setPointerCapture) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+      chatWindowBox.classList.add('is-dragging');
+      event.preventDefault();
+    }
+
+    function continueChatWindowDrag(event) {
+      if (!chatWindowDrag || event.pointerId !== chatWindowDrag.pointerId) return;
+      const rect = chatWindowBox.getBoundingClientRect();
+      const left = clampWindowPosition(event.clientX - chatWindowDrag.offsetX, 0, window.innerWidth - rect.width);
+      const top = clampWindowPosition(event.clientY - chatWindowDrag.offsetY, 0, window.innerHeight - rect.height);
+      chatWindowBox.style.left = `${left}px`;
+      chatWindowBox.style.top = `${top}px`;
+    }
+
+    function endChatWindowDrag(event) {
+      if (!chatWindowDrag || (event && event.pointerId !== chatWindowDrag.pointerId)) return;
+      chatWindowDrag = null;
+      chatWindowBox.classList.remove('is-dragging');
+    }
+
+    chatWindowMoveBtn.addEventListener('pointerdown', beginChatWindowDrag);
+    chatWindowBox.addEventListener('pointerdown', (event) => {
+      if (!chatWindowBox.classList.contains('windowed') || event.target.closest('.chat-window-controls')) return;
+      if (event.clientY - chatWindowBox.getBoundingClientRect().top <= 12) beginChatWindowDrag(event);
+    });
+    document.addEventListener('pointermove', continueChatWindowDrag);
+    document.addEventListener('pointerup', endChatWindowDrag);
+    document.addEventListener('pointercancel', endChatWindowDrag);
+
+    chatWindowToggleBtn.addEventListener('click', () => {
+      setChatWindowed(!chatWindowBox.classList.contains('windowed'));
+    });
+
+    if (chatWindowCloseBtn) {
+      chatWindowCloseBtn.addEventListener('click', () => {
+        if (window.opener) {
+          window.close();
+        } else if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = 'index.html';
+        }
+      });
+    }
+
+    window.addEventListener('resize', () => {
+      if (!chatWindowBox.classList.contains('windowed')) return;
+      const rect = chatWindowBox.getBoundingClientRect();
+      chatWindowBox.style.left = `${clampWindowPosition(rect.left, 0, window.innerWidth - rect.width)}px`;
+      chatWindowBox.style.top = `${clampWindowPosition(rect.top, 0, window.innerHeight - rect.height)}px`;
+    });
+  }
 
   document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
     messages = [];
