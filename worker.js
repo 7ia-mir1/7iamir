@@ -222,7 +222,14 @@ async function handleMedia(request, env) {
     await env.DB.prepare(
       `INSERT INTO media_items
        (id, category, title, url, source, disabled, position, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         category = excluded.category,
+         title = excluded.title,
+         url = excluded.url,
+         source = excluded.source,
+         disabled = excluded.disabled,
+         position = excluded.position`,
     ).bind(
       item.id,
       item.category,
@@ -235,6 +242,72 @@ async function handleMedia(request, env) {
     ).run();
 
     return jsonResponse({ item }, 201);
+  }
+
+  if (request.method === "PUT" || request.method === "PATCH") {
+    const body = await readJson(request);
+    if (!body) return errorResponse("Ожидается JSON-объект.");
+
+    const id = typeof body.id === "string" ? body.id.trim() : "";
+    if (!id || id.length > 100) return errorResponse("Укажите id медиафайла.");
+
+    const existing = await env.DB.prepare(
+      "SELECT id, category, title, url, source, disabled, position, created_at FROM media_items WHERE id = ?",
+    ).bind(id).first();
+    if (!existing) return errorResponse("Медиафайл не найден.", 404);
+
+    const category = typeof body.category === "string" && body.category.trim()
+      ? body.category.trim()
+      : existing.category;
+    const title = typeof body.title === "string" && body.title.trim()
+      ? body.title.trim()
+      : existing.title;
+    const mediaUrl = typeof body.url === "string" && body.url.trim()
+      ? body.url.trim()
+      : existing.url;
+    const source = typeof body.source === "string" && body.source.trim()
+      ? body.source.trim()
+      : existing.source;
+    const disabled = typeof body.disabled === "boolean" ? (body.disabled ? 1 : 0) : existing.disabled;
+    const position = Number.isInteger(body.position) ? body.position : existing.position;
+
+    if (!category || category.length > 100 || !title || title.length > 500 ||
+        !mediaUrl || mediaUrl.length > 2048 || source.length > 50 ||
+        Math.abs(position) > 1000000) {
+      return errorResponse("Некорректные данные медиафайла.");
+    }
+
+    await env.DB.prepare(
+      `UPDATE media_items
+       SET category = ?, title = ?, url = ?, source = ?, disabled = ?, position = ?
+       WHERE id = ?`,
+    ).bind(category, title, mediaUrl, source, disabled, position, id).run();
+
+    return jsonResponse({
+      item: {
+        id,
+        category,
+        title,
+        url: mediaUrl,
+        source,
+        disabled,
+        position,
+        created_at: existing.created_at,
+      },
+    });
+  }
+
+  if (request.method === "DELETE") {
+    const url = new URL(request.url);
+    let id = url.searchParams.get("id");
+    if (!id) {
+      const body = await readJson(request);
+      id = body && typeof body.id === "string" ? body.id.trim() : "";
+    }
+    if (!id || id.length > 100) return errorResponse("Укажите id медиафайла.");
+
+    await env.DB.prepare("DELETE FROM media_items WHERE id = ?").bind(id).run();
+    return jsonResponse({ status: "ok", id });
   }
 
   return errorResponse("Метод не поддерживается.", 405);

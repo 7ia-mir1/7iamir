@@ -193,6 +193,7 @@
     const GornitsaMedia = {
         library: null,
         volumes: { gramophone: 80, bayun: 80, mirror: 85, cinema: 90 },
+        apiSyncReady: false,
         activeCategory: 'mirror',
         activeIndex: 0,
         modalSettingsOpen: true,
@@ -228,7 +229,120 @@
             } catch (e) {
                 this.library = JSON.parse(JSON.stringify(defaultLibrary));
             }
+            this.syncFromApi();
             return this.library;
+        },
+
+        syncFromApi: async function () {
+            try {
+                const response = await fetch('/api/media', { cache: 'no-store' });
+                if (!response.ok) throw new Error('API media unavailable');
+                const data = await response.json();
+                const remoteItems = Array.isArray(data.items) ? data.items : [];
+                if (remoteItems.length === 0) {
+                    this.apiSyncReady = true;
+                    return;
+                }
+
+                const remoteByCategory = { gramophone: [], bayun: [], mirror: [], cinema: [] };
+                for (const remote of remoteItems) {
+                    if (!remoteByCategory[remote.category]) remoteByCategory[remote.category] = [];
+                    remoteByCategory[remote.category].push({
+                        id: remote.id,
+                        _apiId: remote.id,
+                        title: remote.title,
+                        url: remote.url,
+                        source: remote.source,
+                        disabled: Boolean(remote.disabled),
+                        position: Number(remote.position) || 0
+                    });
+                }
+
+                for (const category of Object.keys(remoteByCategory)) {
+                    const localItems = (this.library[category] || []).filter(item =>
+                        item.url && item.url.startsWith('indexeddb:')
+                    );
+                    const remote = remoteByCategory[category].sort((a, b) =>
+                        (a.position - b.position) || a.title.localeCompare(b.title)
+                    );
+                    this.library[category] = remote.concat(localItems);
+                }
+
+                this.apiSyncReady = true;
+                this.save();
+            } catch (error) {
+                console.warn('Не удалось загрузить общую медиатеку:', error);
+            }
+        },
+
+        saveApiItem: async function (category, item) {
+            if (!item || item.url.startsWith('indexeddb:') || item.source === 'builtin') return;
+            try {
+                const response = await fetch('/api/media', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        id: item._apiId || item.id,
+                        category,
+                        title: item.title,
+                        url: item.url,
+                        source: item.source,
+                        disabled: Boolean(item.disabled),
+                        position: (this.library[category] || []).indexOf(item)
+                    })
+                });
+                if (!response.ok) throw new Error('Не удалось сохранить медиафайл');
+                const data = await response.json();
+                if (data.item) {
+                    item._apiId = data.item.id;
+                    this.save();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Не удалось сохранить запись в общей базе D1.');
+            }
+        },
+
+        updateApiItem: async function (item) {
+            if (!item || !item._apiId) return;
+            try {
+                await fetch('/api/media', {
+                    method: 'PUT',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify(item)
+                });
+            } catch (error) {
+                console.error('Не удалось обновить медиафайл:', error);
+            }
+        },
+
+        deleteApiItem: async function (item) {
+            if (!item || !item._apiId) return;
+            try {
+                await fetch('/api/media?id=' + encodeURIComponent(item._apiId), {
+                    method: 'DELETE'
+                });
+            } catch (error) {
+                console.error('Не удалось удалить медиафайл:', error);
+            }
+        },
+
+        syncCategoryOrderToApi: async function (category) {
+            const list = this.library[category] || [];
+            for (let position = 0; position < list.length; position++) {
+                const item = list[position];
+                if (item._apiId) {
+                    await this.updateApiItem({
+                        id: item._apiId,
+                        category,
+                        title: item.title,
+                        url: item.url,
+                        source: item.source,
+                        disabled: Boolean(item.disabled),
+                        position
+                    });
+                }
+            }
         },
 
         save: function () {
@@ -322,6 +436,7 @@
             }, extra || {});
             this.library[category].unshift(item);
             this.save();
+            this.saveApiItem(category, item);
             return item;
         },
 
@@ -362,6 +477,7 @@
             }
 
             this.save();
+            this.syncCategoryOrderToApi(category);
             return true;
         },
 
@@ -370,6 +486,15 @@
             if (!list || !list[index]) return;
             list[index].disabled = !list[index].disabled;
             this.save();
+            this.updateApiItem({
+                id: list[index]._apiId,
+                category,
+                title: list[index].title,
+                url: list[index].url,
+                source: list[index].source,
+                disabled: list[index].disabled,
+                position: index
+            });
             return list[index].disabled;
         },
 
@@ -380,7 +505,9 @@
                 if (removed && removed.url && removed.url.startsWith('indexeddb:')) {
                     LocalFileStore.deleteFile(removed.url.replace('indexeddb:', ''));
                 }
+                this.deleteApiItem(removed);
                 this.save();
+                this.syncCategoryOrderToApi(category);
             }
         },
 
@@ -398,6 +525,10 @@
             if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
             if (u.includes('vk.com') || u.includes('vkvideo.ru')) return 'vk';
             if (u.includes('rutube.ru')) return 'rutube';
+            if (u.includes('pexels.com')) return 'pexels';
+            if (u.includes('archive.org')) return 'archive';
+            if (u.includes('clipmuz')) return 'clipmuz';
+            if (u.includes('mobclip')) return 'mobclip';
             return 'server';
         },
 
