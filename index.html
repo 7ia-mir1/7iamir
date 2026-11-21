@@ -502,7 +502,7 @@
             ozero: [
                 { id: 'oz_telega', fx: 0.25, fy: 0.63, r: 54, label: "Лошадь с телегой", type: 'nav', action: () => showChoiceModal("Путь от Озера", "Выберите маршрут от озера Лесовика:", [
                     { text: "🏛️ На Площадь", onClick: () => startRoadTravel(getRoadKey('doroga_les_obra'), 'ploshad') },
-                    { text: "🎃 К Бабе Яге в чащу", onClick: () => openYagaWithCashCheck() },
+                    { text: "🎃 К Бабе Яге в чащу", onClick: () => openYagaScene() },
                     { text: "Остаться", onClick: () => {} }
                 ]) },
                 { id: 'oz_stend', fx: 0.495, fy: 0.59, r: 68, label: "Информация (Свиток)", type: 'nav', drawStand: false, action: () => { sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.href = 'ozero_info.html?return=lake'; } },
@@ -1058,6 +1058,11 @@
                 return;
             }
             window.open('yaga_chat.html?gender=' + userGender, '_blank');
+        }
+
+        function openYagaScene() {
+            sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero');
+            window.open('yaga_chat.html?mode=scene&return=ozero&gender=' + encodeURIComponent(userGender), '_blank');
         }
 
         function gameLoop() {
