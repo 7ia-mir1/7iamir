@@ -175,7 +175,10 @@
                     Управление идеями из Кабинета труда, анкетами Детектива, совпавшими парами и казной
                 </div>
             </div>
-            <button class="close-btn" onclick="closeAdmin()">ЗАКРЫТЬ</button>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <button class="action-btn gold" onclick="enterSiteAsAdmin()">🌐 Перейти на сайт (режим админа)</button>
+                <button class="close-btn" onclick="closeAdmin()">ЗАКРЫТЬ</button>
+            </div>
         </div>
 
         <div class="stats-bar">
@@ -526,6 +529,12 @@
         function closeAdmin() {
             if (window.opener) window.close();
             else window.location.href = 'index.html';
+        }
+
+        function enterSiteAsAdmin() {
+            sessionStorage.setItem('GORNITSA_ADMIN_MODE', '1');
+            localStorage.setItem('GORNITSA_ADMIN_MODE', '1');
+            window.location.href = 'index.html?admin=1';
         }
 
         renderAdminUI();
