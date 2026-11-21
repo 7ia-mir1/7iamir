@@ -92,6 +92,23 @@
             align-items: center;
             gap: 10px;
         }
+        .gemini-settings-btn {
+            width: 38px;
+            height: 36px;
+            padding: 0;
+            background: linear-gradient(180deg, #7a5230 0%, #4a301a 100%);
+            color: #ffd700;
+            border: 1.5px solid #ffd700;
+            border-radius: 9px;
+            font-size: 19px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .gemini-settings-btn:hover {
+            background: linear-gradient(180deg, #9c6b40 0%, #634124 100%);
+            color: #fff;
+        }
+        .mobile-button-label { display: none; }
         .keep-talking-btn {
             background: linear-gradient(180deg, #d4a039 0%, #9c6c19 100%);
             color: #fff;
@@ -297,6 +314,27 @@
         }
         @media (max-width: 720px) {
             .yaga-portrait-frame { display: none; }
+            .top-bar {
+                flex-wrap: wrap;
+                row-gap: 6px;
+                padding: 6px 10px;
+            }
+            .clock-block { flex: 1 1 100%; }
+            .top-actions {
+                display: grid;
+                grid-template-columns: 38px minmax(0, 1fr) minmax(0, 1fr);
+                width: 100%;
+                gap: 6px;
+            }
+            .top-bar .top-actions .keep-talking-btn,
+            .top-bar .top-actions .finish-btn {
+                width: 100%;
+                min-width: 0;
+                white-space: normal;
+            }
+            .desktop-button-label { display: none; }
+            .mobile-button-label { display: inline; }
+            .scroll-container { height: calc(100vh - 128px); }
         }
 
         /* Нижняя панель ввода */
@@ -626,11 +664,14 @@
         </div>
 
         <div class="top-actions">
-            <button class="keep-talking-btn" id="keepTalkingBtn" onclick="enableUnlimitedMode()">
-                ⏳ не прерывать разговор
+            <button class="gemini-settings-btn" type="button" onclick="configureApiKeyPrompt()" title="Настроить Gemini" aria-label="Настроить Gemini">⚙</button>
+            <button class="keep-talking-btn" id="keepTalkingBtn" onclick="enableUnlimitedMode()" aria-label="Не прерывать разговор">
+                <span class="desktop-button-label">⏳ не прерывать разговор</span>
+                <span class="mobile-button-label">⏳ Продолжить</span>
             </button>
-            <button class="finish-btn" onclick="finishConversation()">
-                🎃 Закончить разговор
+            <button class="finish-btn" onclick="finishConversation()" aria-label="Закончить разговор">
+                <span class="desktop-button-label">🎃 Закончить разговор</span>
+                <span class="mobile-button-label">🎃 Закончить</span>
             </button>
         </div>
     </div>
@@ -844,12 +885,17 @@
         var STORAGE_HISTORY_KEY = 'gornitsa_yaga_history_v3';
         var STORAGE_VISITED_KEY = 'gornitsa_yaga_visited_v3';
         var MAX_STORED_MESSAGES = 36;
+        var MAX_STORED_HISTORY_CHARS = 32000;
+        var MAX_AI_CONTEXT_MESSAGES = 14;
+        var MAX_AI_CONTEXT_CHARS = 18000;
+        var MAX_USER_MESSAGE_CHARS = 8000;
 
         var chatHistory = [];
         var isThinking = false;
 
         function autoResizeInput(el) {
             if (!el) return;
+            el.setCustomValidity('');
             el.style.height = 'auto';
             var nextHeight = Math.max(88, Math.min(el.scrollHeight, 155));
             el.style.height = nextHeight + 'px';
@@ -1022,11 +1068,63 @@
             if (chatHistory.length > MAX_STORED_MESSAGES) {
                 chatHistory = chatHistory.slice(chatHistory.length - MAX_STORED_MESSAGES);
             }
+            var historyChars = chatHistory.reduce(function(total, item) {
+                return total + (item && typeof item.text === 'string' ? item.text.length : 0);
+            }, 0);
+            while (chatHistory.length > 1 && historyChars > MAX_STORED_HISTORY_CHARS) {
+                var oldest = chatHistory.shift();
+                historyChars -= oldest && typeof oldest.text === 'string' ? oldest.text.length : 0;
+            }
             try {
                 localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(chatHistory));
             } catch (e) {
                 chatHistory = chatHistory.slice(-16);
                 try { localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(chatHistory)); } catch (err) {}
+            }
+        }
+
+        function getRecentAIContext(maxMessages) {
+            var recent = [];
+            var contextChars = 0;
+            var limit = maxMessages || MAX_AI_CONTEXT_MESSAGES;
+            for (var i = chatHistory.length - 1; i >= 0 && recent.length < limit; i--) {
+                var item = chatHistory[i];
+                if (!item || typeof item.text !== 'string' || !item.text.trim()) continue;
+                if (contextChars + item.text.length > MAX_AI_CONTEXT_CHARS) break;
+                recent.unshift({
+                    role: item.role === 'model' ? 'model' : 'user',
+                    text: item.text
+                });
+                contextChars += item.text.length;
+            }
+            while (recent.length && recent[0].role === 'model') recent.shift();
+            var normalized = [];
+            recent.forEach(function(item) {
+                var previous = normalized[normalized.length - 1];
+                if (previous && previous.role === item.role) {
+                    previous.text += '\n' + item.text;
+                } else {
+                    normalized.push({ role: item.role, text: item.text });
+                }
+            });
+            return normalized;
+        }
+
+        async function fetchWithTimeout(url, options, timeoutMs) {
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function() { controller.abort(); }, timeoutMs);
+            try {
+                var requestOptions = Object.assign({}, options || {}, { signal: controller.signal });
+                var response = await fetch(url, requestOptions);
+                var responseText = await response.text();
+                return {
+                    ok: response.ok,
+                    status: response.status,
+                    json: async function() { return JSON.parse(responseText); },
+                    text: async function() { return responseText; }
+                };
+            } finally {
+                clearTimeout(timeoutId);
             }
         }
 
@@ -1094,6 +1192,11 @@
             var input = document.getElementById('userInput');
             var text = input.value.trim();
             if (!text) return;
+            if (text.length > MAX_USER_MESSAGE_CHARS) {
+                input.setCustomValidity('Сократите сообщение до ' + MAX_USER_MESSAGE_CHARS + ' символов, чтобы чат отвечал быстрее.');
+                input.reportValidity();
+                return;
+            }
 
             input.value = '';
             autoResizeInput(input);
@@ -1103,7 +1206,13 @@
             showTypingIndicator();
 
             var startTime = Date.now();
-            var reply = await fetchSmartAIReply(text);
+            var reply;
+            try {
+                reply = await fetchSmartAIReply(text);
+            } catch (error) {
+                console.error('Не удалось получить ответ для чата Бабы-Яги:', error);
+                reply = 'Не удалось получить ответ. Проверьте подключение и попробуйте ещё раз.';
+            }
 
             var elapsed = Date.now() - startTime;
             var waitMore = Math.max(0, 2500 - elapsed);
@@ -1117,6 +1226,7 @@
 
         function getAvailableApiKey() {
             try {
+                if (localStorage.getItem('gornitsa_gemini_disabled') === 'true') return '';
                 var localKey = (localStorage.getItem('gornitsa_gemini_api_key') || localStorage.getItem('gemini_api_key') || '').trim();
                 if (localKey) return localKey;
                 if (window.opener && !window.opener.closed) {
@@ -1130,13 +1240,27 @@
         function configureApiKeyPrompt() {
             var current = getAvailableApiKey();
             var entered = prompt(
-                'По умолчанию чат уже подключён к бесплатному онлайн-ИИ и отвечает без ключа.\n\nЕсли у вас есть личный ключ Google Gemini API, можете вставить его ниже (или оставить поле пустым для автоматического режима):',
+                'Введите личный ключ Google Gemini API из Google AI Studio. Он сохранится в localStorage этого браузера и будет доступен скриптам сайта — используйте ключ с ограничениями и не публикуйте его.\n\nОставьте поле пустым, чтобы удалить сохранённый ключ и использовать резервный режим:',
                 current
             );
-            if (entered !== null) {
-                try {
-                    localStorage.setItem('gornitsa_gemini_api_key', entered.trim());
-                } catch (e) {}
+            if (entered === null) return;
+
+            var apiKey = entered.trim();
+            try {
+                if (apiKey) {
+                    localStorage.setItem('gornitsa_gemini_api_key', apiKey);
+                    localStorage.removeItem('gemini_api_key');
+                    localStorage.removeItem('gornitsa_gemini_disabled');
+                    alert('Ключ Gemini сохранён в этом браузере. Следующий ответ будет запрошен у Gemini.');
+                } else {
+                    localStorage.removeItem('gornitsa_gemini_api_key');
+                    localStorage.removeItem('gemini_api_key');
+                    localStorage.setItem('gornitsa_gemini_disabled', 'true');
+                    alert('Ключ Gemini удалён. Чат переключится на резервный режим.');
+                }
+            } catch (error) {
+                console.error('Не удалось сохранить ключ Gemini в браузере:', error);
+                alert('Не удалось сохранить ключ Gemini. Проверьте настройки хранения данных браузера.');
             }
         }
 
@@ -1159,14 +1283,14 @@
             // А) Если задан ключ Google Gemini API — обращаемся напрямую к Gemini 2.5 Flash
             if (apiKey) {
                 try {
-                    var recentContext = chatHistory.slice(-14).map(function(m) {
+                    var recentContext = getRecentAIContext().map(function(m) {
                         return {
                             role: m.role === 'model' ? 'model' : 'user',
                             parts: [{ text: m.text }]
                         };
                     });
 
-                    var resp = await fetch(
+                    var resp = await fetchWithTimeout(
                         'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
                         {
                             method: 'POST',
@@ -1176,22 +1300,29 @@
                                 contents: recentContext,
                                 generationConfig: { temperature: 0.6, maxOutputTokens: 900 }
                             })
-                        }
+                        },
+                        15000
                     );
                     if (resp.ok) {
                         var data = await resp.json();
-                        var candidate = data && data.candidates && data.candidates[0] &&
-                                        data.candidates[0].content && data.candidates[0].content.parts &&
-                                        data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+                        var candidateParts = data && data.candidates && data.candidates[0] &&
+                                             data.candidates[0].content && data.candidates[0].content.parts;
+                        var candidate = Array.isArray(candidateParts)
+                            ? candidateParts.map(function(part) { return part.text || ''; }).join('').trim()
+                            : '';
                         if (candidate) return cleanMarkdown(candidate.trim());
+                    } else {
+                        console.warn('Gemini API вернул HTTP ' + resp.status + '. Используется резервный ответ.');
                     }
-                } catch (e) {}
+                } catch (error) {
+                    console.warn('Gemini не ответил вовремя или недоступен. Используется резервный ответ.', error);
+                }
             }
 
             // Б) Автоматический бесплатный онлайн-ИИ без ключа (Pollinations OpenAI Endpoint)
             try {
                 var messagesPayload = [{ role: 'system', content: systemPrompt }];
-                var recentMsgs = chatHistory.slice(-10);
+                var recentMsgs = getRecentAIContext(10);
                 for (var i = 0; i < recentMsgs.length; i++) {
                     messagesPayload.push({
                         role: recentMsgs[i].role === 'model' ? 'assistant' : 'user',
@@ -1199,20 +1330,15 @@
                     });
                 }
 
-                var controller = new AbortController();
-                var timeoutId = setTimeout(function() { controller.abort(); }, 12000);
-
-                var pollResp = await fetch('https://text.pollinations.ai/openai', {
+                var pollResp = await fetchWithTimeout('https://text.pollinations.ai/openai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         model: 'openai',
                         messages: messagesPayload,
                         temperature: 0.6
-                    }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
+                    })
+                }, 12000);
 
                 if (pollResp.ok) {
                     var pollData = await pollResp.json();
@@ -1222,24 +1348,25 @@
                         return cleanMarkdown(aiText.trim());
                     }
                 }
-            } catch (e) {}
+            } catch (error) {
+                console.warn('Основной резервный ИИ недоступен, пробую следующий канал.', error);
+            }
 
             // В) Резервный бесплатный GET-канал онлайн-ИИ
             try {
-                var controller2 = new AbortController();
-                var timeoutId2 = setTimeout(function() { controller2.abort(); }, 9000);
                 var directUrl = 'https://text.pollinations.ai/' + encodeURIComponent(
                     'Ответь подробно, умно и по делу на русском языке (без сказочного стиля): ' + userText
                 ) + '?model=openai';
-                var resp2 = await fetch(directUrl, { signal: controller2.signal });
-                clearTimeout(timeoutId2);
+                var resp2 = await fetchWithTimeout(directUrl, null, 9000);
                 if (resp2.ok) {
                     var txt2 = await resp2.text();
                     if (txt2 && txt2.trim().length > 5 && txt2.indexOf('<!DOCTYPE') === -1) {
                         return cleanMarkdown(txt2.trim());
                     }
                 }
-            } catch (e) {}
+            } catch (error) {
+                console.warn('Резервный ИИ недоступен, использую встроенную базу знаний.', error);
+            }
 
             // Г) Если нет интернета или сервер недоступен: поиск по Википедии + встроенная экспертная база знаний
             var wikiAnswer = await tryWikipediaKnowledge(userText);
@@ -1265,14 +1392,14 @@
 
                 var searchUrl = 'https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
                                 encodeURIComponent(cleaned) + '&utf8=&format=json&origin=*&srlimit=1';
-                var sResp = await fetch(searchUrl);
+                var sResp = await fetchWithTimeout(searchUrl, null, 5000);
                 if (!sResp.ok) return null;
                 var sData = await sResp.json();
                 var hit = sData && sData.query && sData.query.search && sData.query.search[0];
                 if (!hit || !hit.title) return null;
 
                 var sumUrl = 'https://ru.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(hit.title);
-                var sumResp = await fetch(sumUrl);
+                var sumResp = await fetchWithTimeout(sumUrl, null, 5000);
                 if (!sumResp.ok) return null;
                 var sumData = await sumResp.json();
                 if (sumData && sumData.extract && sumData.extract.length > 40) {
