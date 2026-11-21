@@ -92,22 +92,6 @@
             align-items: center;
             gap: 10px;
         }
-        .gemini-settings-btn {
-            width: 38px;
-            height: 36px;
-            padding: 0;
-            background: linear-gradient(180deg, #7a5230 0%, #4a301a 100%);
-            color: #ffd700;
-            border: 1.5px solid #ffd700;
-            border-radius: 9px;
-            font-size: 19px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        .gemini-settings-btn:hover {
-            background: linear-gradient(180deg, #9c6b40 0%, #634124 100%);
-            color: #fff;
-        }
         .mobile-button-label { display: none; }
         .keep-talking-btn {
             background: linear-gradient(180deg, #d4a039 0%, #9c6c19 100%);
@@ -322,7 +306,7 @@
             .clock-block { flex: 1 1 100%; }
             .top-actions {
                 display: grid;
-                grid-template-columns: 38px minmax(0, 1fr) minmax(0, 1fr);
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 width: 100%;
                 gap: 6px;
             }
@@ -664,7 +648,6 @@
         </div>
 
         <div class="top-actions">
-            <button class="gemini-settings-btn" type="button" onclick="configureApiKeyPrompt()" title="Настроить Gemini" aria-label="Настроить Gemini">⚙</button>
             <button class="keep-talking-btn" id="keepTalkingBtn" onclick="enableUnlimitedMode()" aria-label="Не прерывать разговор">
                 <span class="desktop-button-label">⏳ не прерывать разговор</span>
                 <span class="mobile-button-label">⏳ Продолжить</span>
@@ -889,6 +872,14 @@
         var MAX_AI_CONTEXT_MESSAGES = 14;
         var MAX_AI_CONTEXT_CHARS = 18000;
         var MAX_USER_MESSAGE_CHARS = 8000;
+
+        try {
+            localStorage.removeItem('gornitsa_gemini_api_key');
+            localStorage.removeItem('gemini_api_key');
+            localStorage.removeItem('gornitsa_gemini_disabled');
+        } catch (error) {
+            console.warn('Не удалось удалить прежние локальные настройки Gemini:', error);
+        }
 
         var chatHistory = [];
         var isThinking = false;
@@ -1224,46 +1215,6 @@
             }, waitMore);
         }
 
-        function getAvailableApiKey() {
-            try {
-                if (localStorage.getItem('gornitsa_gemini_disabled') === 'true') return '';
-                var localKey = (localStorage.getItem('gornitsa_gemini_api_key') || localStorage.getItem('gemini_api_key') || '').trim();
-                if (localKey) return localKey;
-                if (window.opener && !window.opener.closed) {
-                    if (window.opener.GEMINI_API_KEY) return String(window.opener.GEMINI_API_KEY).trim();
-                    if (window.opener.apiKey) return String(window.opener.apiKey).trim();
-                }
-            } catch (e) {}
-            return '';
-        }
-
-        function configureApiKeyPrompt() {
-            var current = getAvailableApiKey();
-            var entered = prompt(
-                'Введите личный ключ Google Gemini API из Google AI Studio. Он сохранится в localStorage этого браузера и будет доступен скриптам сайта — используйте ключ с ограничениями и не публикуйте его.\n\nОставьте поле пустым, чтобы удалить сохранённый ключ и использовать резервный режим:',
-                current
-            );
-            if (entered === null) return;
-
-            var apiKey = entered.trim();
-            try {
-                if (apiKey) {
-                    localStorage.setItem('gornitsa_gemini_api_key', apiKey);
-                    localStorage.removeItem('gemini_api_key');
-                    localStorage.removeItem('gornitsa_gemini_disabled');
-                    alert('Ключ Gemini сохранён в этом браузере. Следующий ответ будет запрошен у Gemini.');
-                } else {
-                    localStorage.removeItem('gornitsa_gemini_api_key');
-                    localStorage.removeItem('gemini_api_key');
-                    localStorage.setItem('gornitsa_gemini_disabled', 'true');
-                    alert('Ключ Gemini удалён. Чат переключится на резервный режим.');
-                }
-            } catch (error) {
-                console.error('Не удалось сохранить ключ Gemini в браузере:', error);
-                alert('Не удалось сохранить ключ Gemini. Проверьте настройки хранения данных браузера.');
-            }
-        }
-
         async function fetchSmartAIReply(userText) {
             var genderInfo = userGender === 'woman'
                 ? 'Собеседник — женщина.'
@@ -1278,48 +1229,39 @@
                 '3. Если задан технический, автомобильный, бытовой или научный вопрос — дай чёткий экспертный разбор простым и понятным языком.\n' +
                 '4. Если человек просто общается о жизни или отношениях — поддерживай умную, логичную и живую беседу.';
 
-            var apiKey = getAvailableApiKey();
-
-            // А) Если задан ключ Google Gemini API — обращаемся напрямую к Gemini 2.5 Flash
-            if (apiKey) {
-                try {
-                    var recentContext = getRecentAIContext().map(function(m) {
-                        return {
-                            role: m.role === 'model' ? 'model' : 'user',
-                            parts: [{ text: m.text }]
-                        };
-                    });
-
-                    var resp = await fetchWithTimeout(
-                        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey),
-                        {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                systemInstruction: { parts: [{ text: systemPrompt }] },
-                                contents: recentContext,
-                                generationConfig: { temperature: 0.6, maxOutputTokens: 900 }
-                            })
-                        },
-                        15000
+            // Сначала используем серверный Gemini; при сбое продолжаем прежнюю цепочку резервных ответов.
+            try {
+                var geminiResp = await fetchWithTimeout(
+                    '/api/yaga-chat',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gender: userGender,
+                            history: getRecentAIContext()
+                        })
+                    },
+                    23000
+                );
+                if (geminiResp.ok) {
+                    var geminiData = await geminiResp.json();
+                    var geminiReply = geminiData && typeof geminiData.reply === 'string'
+                        ? geminiData.reply.trim()
+                        : '';
+                    if (geminiReply) return cleanMarkdown(geminiReply);
+                    console.warn('Сервер Gemini вернул пустой ответ. Используется резервный режим.');
+                } else {
+                    var geminiError = await geminiResp.json().catch(function() { return {}; });
+                    console.warn(
+                        'Сервер Gemini вернул HTTP ' + geminiResp.status + '. Используется резервный режим.',
+                        geminiError.error || ''
                     );
-                    if (resp.ok) {
-                        var data = await resp.json();
-                        var candidateParts = data && data.candidates && data.candidates[0] &&
-                                             data.candidates[0].content && data.candidates[0].content.parts;
-                        var candidate = Array.isArray(candidateParts)
-                            ? candidateParts.map(function(part) { return part.text || ''; }).join('').trim()
-                            : '';
-                        if (candidate) return cleanMarkdown(candidate.trim());
-                    } else {
-                        console.warn('Gemini API вернул HTTP ' + resp.status + '. Используется резервный ответ.');
-                    }
-                } catch (error) {
-                    console.warn('Gemini не ответил вовремя или недоступен. Используется резервный ответ.', error);
                 }
+            } catch (error) {
+                console.warn('Сервер Gemini недоступен. Используется резервный режим.', error);
             }
 
-            // Б) Автоматический бесплатный онлайн-ИИ без ключа (Pollinations OpenAI Endpoint)
+            // Автоматический бесплатный онлайн-ИИ без ключа (Pollinations OpenAI Endpoint)
             try {
                 var messagesPayload = [{ role: 'system', content: systemPrompt }];
                 var recentMsgs = getRecentAIContext(10);

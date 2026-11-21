@@ -31,6 +31,9 @@ function boundedLimit(value, fallback = 50) {
   return Number.isInteger(parsed) ? Math.min(Math.max(parsed, 1), 100) : fallback;
 }
 
+const MAX_YAGA_HISTORY_MESSAGES = 36;
+const MAX_YAGA_HISTORY_CHARS = 32000;
+
 async function handleChat(request, env) {
   if (request.method === "GET") {
     const now = Math.floor(Date.now() / 1000);
@@ -172,6 +175,127 @@ async function handleChat(request, env) {
   }
 
   return errorResponse("Метод не поддерживается.", 405);
+}
+
+async function handleYagaChat(request, env) {
+  if (request.method !== "POST") {
+    return errorResponse("Метод не поддерживается.", 405);
+  }
+  if (typeof env.GEMINI_API_KEY !== "string" || !env.GEMINI_API_KEY.trim()) {
+    return errorResponse("Сервис Gemini не настроен на сервере.", 503);
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > 50000) {
+    return errorResponse("История чата слишком велика.", 413);
+  }
+
+  const body = await readJson(request);
+  if (!body) return errorResponse("Ожидается JSON-объект.");
+  if (!Array.isArray(body.history) ||
+      body.history.length === 0 ||
+      body.history.length > MAX_YAGA_HISTORY_MESSAGES) {
+    return errorResponse("Передана некорректная история чата.");
+  }
+
+  let historyChars = 0;
+  const history = [];
+  for (const item of body.history) {
+    if (!item || !["user", "model"].includes(item.role) || typeof item.text !== "string") {
+      return errorResponse("В истории обнаружено некорректное сообщение.");
+    }
+    const text = item.text.trim();
+    if (!text) continue;
+    historyChars += text.length;
+    if (historyChars > MAX_YAGA_HISTORY_CHARS) {
+      return errorResponse("История чата превышает лимит 32000 символов.", 413);
+    }
+    history.push({ role: item.role, text });
+  }
+
+  while (history.length && history[0].role === "model") history.shift();
+  const normalizedHistory = [];
+  for (const item of history) {
+    const previous = normalizedHistory[normalizedHistory.length - 1];
+    if (previous && previous.role === item.role) {
+      previous.text += `\n${item.text}`;
+    } else {
+      normalizedHistory.push({ role: item.role, text: item.text });
+    }
+  }
+  if (!normalizedHistory.length ||
+      normalizedHistory[normalizedHistory.length - 1].role !== "user") {
+    return errorResponse("Последнее сообщение должно быть вопросом пользователя.");
+  }
+
+  const gender = body.gender === "woman" ? "женщина" : "мужчина";
+  const systemPrompt =
+    `Ты — Баба-Яга, мудрая хозяйка лесной избушки: сказочная, наблюдательная и чуть ироничная, но доброжелательная. Твой собеседник — ${gender}. ` +
+    "Отвечай по-русски, живо и с лёгкой сказочной интонацией, не превращая каждый ответ в длинную сказку. " +
+    "Сначала отвечай прямо на вопрос, затем добавляй полезные пояснения и практические шаги. " +
+    "Не выдумывай факты; если не уверена или вопрос требует специалиста, скажи об этом честно.";
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": env.GEMINI_API_KEY.trim(),
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: normalizedHistory.map(item => ({
+            role: item.role,
+            parts: [{ text: item.text }],
+          })),
+          generationConfig: { temperature: 0.7, maxOutputTokens: 900 },
+        }),
+        signal: controller.signal,
+      },
+    );
+    const responseText = await response.text();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      console.error("Gemini returned a non-JSON response.");
+      return errorResponse("Gemini вернул некорректный ответ.", 502);
+    }
+
+    if (!response.ok) {
+      const detail = typeof result?.error?.message === "string"
+        ? result.error.message
+        : "";
+      console.error(`Gemini API error (${response.status}):`, detail || "No details returned.");
+      return errorResponse(
+        response.status === 429
+          ? "Gemini временно перегружен. Попробуйте ещё раз позже."
+          : `Ошибка Gemini API${detail ? `: ${detail}` : ` (HTTP ${response.status})`}.`,
+        response.status === 429 ? 503 : 502,
+      );
+    }
+
+    const reply = result?.candidates?.[0]?.content?.parts
+      ?.map(part => typeof part.text === "string" ? part.text : "")
+      .join("")
+      .trim();
+    if (!reply) {
+      return errorResponse("Gemini не вернул текстовый ответ.", 502);
+    }
+    return jsonResponse({ reply });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      return errorResponse("Gemini не ответил за 20 секунд.", 504);
+    }
+    console.error("Yaga Gemini request failed:", error);
+    return errorResponse("Не удалось связаться с Gemini.", 502);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function handleMedia(request, env) {
@@ -357,6 +481,7 @@ export default {
 
     try {
       if (pathname === "/api/chat") return await handleChat(request, env);
+      if (pathname === "/api/yaga-chat") return await handleYagaChat(request, env);
       if (pathname === "/api/media") return await handleMedia(request, env);
       if (pathname === "/api/coins") return await handleCoins(request, env);
       return env.ASSETS.fetch(request);
