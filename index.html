@@ -503,7 +503,7 @@
                     { text: "🏛️ На площадь (в Райцентр)", onClick: () => startRoadTravel(getRoadKey('doroga_les_obra'), 'ploshad') },
                     { text: "🎃 К Бабе-Яге (в чащу)", onClick: () => startRoadTravel(getRoadKey('doroga_zveri'), 'yaga') }
                 ]) },
-                { id: 'oz_stend', fx: 0.495, fy: 0.59, r: 68, label: "Информация (Свиток)", type: 'nav', drawStand: false, action: () => { sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.href = 'ozero_info.html'; } },
+                { id: 'oz_stend', fx: 0.495, fy: 0.59, r: 68, label: "Информация (Свиток)", type: 'nav', drawStand: false, action: () => { sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.href = 'ozero_info.html?return=lake'; } },
                 { id: 'oz_lesovik', fx: 0.70, fy: 0.50, r: 50, label: "Леший: Диагностика (20 монет)", type: 'nav', action: () => openLeshiyDiagnostics() },
                 { id: 'oz_sunduk', fx: 0.77, fy: 0.80, r: 52, label: "Сундук: Архив диагностик (2 монеты)", type: 'nav', action: () => openSundukArchiveWithFee() }
             ],

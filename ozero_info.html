@@ -346,6 +346,11 @@
             if (ov) ov.classList.remove('active');
             if (window.opener) {
                 window.close();
+                return;
+            }
+            if (new URLSearchParams(window.location.search).get('return') === 'lake') {
+                sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero');
+                window.location.replace('index.html?loc=ozero');
             }
         }
 
