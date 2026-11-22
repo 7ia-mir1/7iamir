@@ -204,9 +204,14 @@
     background: linear-gradient(135deg, #4a2a12 0%, #2b1708 100%);
     color: #ffea79;
     border: 3px solid #ffcc00;
-    border-left: 9px solid #38d949;
+    border-left: 9px solid #ffcc00;
     box-shadow: 0 4px 14px rgba(0,0,0,0.55), 0 0 12px rgba(255, 204, 0, 0.45);
     transform: translateX(3px);
+  }
+
+  .user-item.active .status-indicator {
+    background: #ffd700;
+    box-shadow: 0 0 8px #ffd700;
   }
 
   .user-item.active .user-avatar {
@@ -2509,6 +2514,61 @@
     margin-top: 0;
   }
 
+  .izba-chat-container {
+    --conversation-header-top: 3px;
+  }
+
+  .izba-chat-container.windowed {
+    --conversation-header-top: 12px;
+  }
+
+  .active-dialog-bar {
+    position: absolute;
+    z-index: 10005;
+    top: var(--conversation-header-top);
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: fit-content;
+    max-width: 60%;
+    height: clamp(28px, 3.2vw, 42px);
+    min-height: clamp(28px, 3.2vw, 42px);
+    margin: 0;
+    padding: 0 14px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transform: translateX(-50%);
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+    background: #111;
+    color: #ffd700;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: clamp(28px, 3.2vw, 42px);
+    text-align: center;
+  }
+
+  #currentRoomTitle {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .messages-area {
+    top: 0;
+    padding: calc(var(--conversation-header-top) + clamp(28px, 3.2vw, 42px) + 10px) 14px 10px;
+    box-sizing: border-box;
+  }
+
+  .user-item.active {
+    border-left-color: #ffd700;
+  }
+
 </style>
 </head>
 <body>
@@ -2722,6 +2782,7 @@
     { id: 'ALL', label: 'Общий зал', avatar: '🏡', online: true, strictNoSave: false }
   ];
   let selectedTargetId = 'ALL';
+  let isSupremeChatSelected = false;
 
   let messages = [];
 
@@ -2771,6 +2832,7 @@
       `;
       item.addEventListener('click', () => {
         selectedTargetId = u.id;
+        isSupremeChatSelected = false;
         renderOnlineList();
         updateRoomHeader();
         renderMessages({ forceScrollBottom: true });
@@ -2784,7 +2846,8 @@
       `Анонимная связь. В сети: ${1 + onlineUsers.filter(user => user.id !== 'ALL' && user.online).length} ID`;
   }
 
-  function openDirectChat(targetId) {
+  function openDirectChat(targetId, openedFromSupremeButton = false) {
+    targetId = String(targetId);
     if (targetId === myId) return;
     if (!onlineUsers.some(user => user.id === targetId)) {
       onlineUsers.push({
@@ -2797,6 +2860,7 @@
       });
     }
     selectedTargetId = targetId;
+    isSupremeChatSelected = openedFromSupremeButton;
     renderOnlineList();
     updateRoomHeader();
     renderMessages({ forceScrollBottom: true });
@@ -2805,18 +2869,18 @@
   const supremeChatBtn = document.getElementById('supremeChatBtn');
   supremeChatBtn.disabled = myId === '1003';
   supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
-  supremeChatBtn.addEventListener('click', () => openDirectChat('1003'));
+  supremeChatBtn.addEventListener('click', () => openDirectChat('1003', true));
 
   function updateRoomHeader() {
-    const target = onlineUsers.find(u => u.id === selectedTargetId);
     if (selectedTargetId === 'ALL') {
-      currentRoomTitleEl.textContent = 'Общий зал (видят все онлайн ID)';
+      currentRoomTitleEl.textContent = 'Общий зал';
+    } else if (isSupremeChatSelected) {
+      currentRoomTitleEl.textContent = 'Чат с Верховным';
     } else {
-      const label = target ? target.label : `ID ${selectedTargetId}`;
-      currentRoomTitleEl.textContent = target && target.online
-        ? `Активный диалог с ${label}`
-        : `Активный диалог с ${label} (не в сети)`;
+      currentRoomTitleEl.textContent = `Личный чат с ID ${selectedTargetId}`;
     }
+    supremeChatBtn.classList.toggle('active', isSupremeChatSelected);
+    supremeChatBtn.setAttribute('aria-pressed', String(isSupremeChatSelected));
     updatePrivacyBadge();
   }
 
@@ -3135,9 +3199,11 @@
     const now = Date.now();
     const visibleMessages = messages.filter(m => {
       if (m.deletedForMe) return false;
-      if (selectedTargetId === 'ALL') return m.targetId === 'ALL';
-      return (m.senderId === selectedTargetId && m.targetId === myId) ||
-             (m.senderId === myId && m.targetId === selectedTargetId);
+    const senderId = String(m.senderId);
+    const targetId = String(m.targetId);
+    if (selectedTargetId === 'ALL') return targetId === 'ALL';
+    return (senderId === selectedTargetId && targetId === myId) ||
+           (senderId === myId && targetId === selectedTargetId);
     });
     visibleMessages.sort((a, b) => a.createdAt - b.createdAt);
 
