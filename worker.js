@@ -435,16 +435,31 @@ async function handlePresence(request, env, session) {
   }
 
   const result = await env.DB.prepare(
-    `SELECT presence.user_id AS id
-     FROM online_presence AS presence
-     INNER JOIN users ON users.id = presence.user_id
-     WHERE presence.last_seen_at >= ? AND presence.user_id <> ?
-     ORDER BY presence.user_id`,
-  ).bind(now - PRESENCE_TTL_SECONDS, session.id).all();
+    `SELECT users.id AS id,
+            CASE
+              WHEN presence.last_seen_at >= ?
+                AND EXISTS (
+                  SELECT 1 FROM auth_sessions
+                  WHERE auth_sessions.user_id = users.id
+                    AND auth_sessions.expires_at > ?
+                )
+              THEN 1 ELSE 0
+            END AS online
+     FROM users
+     LEFT JOIN online_presence AS presence ON presence.user_id = users.id
+     WHERE users.id <> ?
+     ORDER BY users.id`,
+  ).bind(now - PRESENCE_TTL_SECONDS, now, session.id).all();
+
+  const users = result.results.map(user => ({
+    id: user.id,
+    online: Boolean(user.online),
+  }));
+  const onlineCount = users.reduce((count, user) => count + Number(user.online), 1);
 
   return jsonResponse({
-    users: result.results,
-    online_count: result.results.length + 1,
+    users,
+    online_count: onlineCount,
   });
 }
 

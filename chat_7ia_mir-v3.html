@@ -739,7 +739,7 @@
     font-family: 'Philosopher', serif;
     font-size: clamp(9px, 0.95vw, 16px);
     font-weight: 700;
-    cursor: not-allowed;
+    cursor: pointer;
   }
 
   .online-list {
@@ -2480,7 +2480,7 @@
           <div class="header-subtitle" id="onlineCountLabel">Анонимная связь. В сети: … ID</div>
           <div class="my-id-badge" id="myIdBadge">Ваш ID: загрузка...</div>
         </header>
-        <button type="button" class="supreme-disabled" aria-disabled="true" disabled>Чат с Верховным</button>
+        <button type="button" class="supreme-disabled" id="supremeChatBtn">Чат с Верховным</button>
         <div class="online-list" id="onlineList">
           <!-- Заполняется скриптом -->
         </div>
@@ -2705,8 +2705,30 @@
     });
 
     document.getElementById('onlineCountLabel').textContent =
-      `Анонимная связь. В сети: ${onlineUsers.length} ID`;
+      `Анонимная связь. В сети: ${1 + onlineUsers.filter(user => user.id !== 'ALL' && user.online).length} ID`;
   }
+
+  function openDirectChat(targetId) {
+    if (targetId === myId) return;
+    if (!onlineUsers.some(user => user.id === targetId)) {
+      onlineUsers.push({
+        id: targetId,
+        label: `ID ${targetId}`,
+        avatar: '',
+        online: false,
+        strictNoSave: false
+      });
+    }
+    selectedTargetId = targetId;
+    renderOnlineList();
+    updateRoomHeader();
+    renderMessages({ forceScrollBottom: true });
+  }
+
+  const supremeChatBtn = document.getElementById('supremeChatBtn');
+  supremeChatBtn.disabled = myId === '1003';
+  supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
+  supremeChatBtn.addEventListener('click', () => openDirectChat('1003'));
 
   function updateRoomHeader() {
     const target = onlineUsers.find(u => u.id === selectedTargetId);
@@ -2714,7 +2736,7 @@
       currentRoomTitleEl.textContent = 'Общий зал (видят все онлайн ID)';
     } else {
       const label = target ? target.label : `ID ${selectedTargetId}`;
-      currentRoomTitleEl.textContent = target
+      currentRoomTitleEl.textContent = target && target.online
         ? `Активный диалог с ${label}`
         : `Активный диалог с ${label} (не в сети)`;
     }
@@ -2737,13 +2759,14 @@
       if (!Array.isArray(result.users)) throw new Error('Некорректный ответ API присутствия');
 
       const contacts = result.users
-        .map(user => String(user.id || ''))
-        .filter(id => /^\d{1,10}$/.test(id) && id !== myId)
-        .map(id => ({
-          id,
-          label: `ID ${id}`,
+        .filter(user => user && user.id !== undefined)
+        .map(user => ({ id: String(user.id), online: Boolean(user.online) }))
+        .filter(user => /^\d{1,10}$/.test(user.id) && user.id !== myId)
+        .map(user => ({
+          id: user.id,
+          label: `ID ${user.id}`,
           avatar: '',
-          online: true,
+          online: user.online,
           strictNoSave: false
         }));
       onlineUsers.splice(0, onlineUsers.length, onlineUsers[0], ...contacts);
@@ -2920,7 +2943,7 @@
     try {
       const response = await fetch(
         `${CHAT_API_URL}?user_id=${encodeURIComponent(myId)}&limit=100`,
-        { cache: 'no-store' }
+        { cache: 'no-store', credentials: 'same-origin' }
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
@@ -2976,6 +2999,7 @@
     const response = await fetch(CHAT_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({
         id: message.id,
         sender_id: message.senderId,
@@ -3097,7 +3121,8 @@
     if (scope === 'both' && !message.localOnly) {
       try {
         const response = await fetch(`${CHAT_API_URL}?id=${encodeURIComponent(msgId)}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          credentials: 'same-origin'
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
       } catch (error) {
@@ -3392,7 +3417,8 @@
 
     try {
       const response = await fetch(`${CHAT_API_URL}?user_id=${encodeURIComponent(myId)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'same-origin'
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
     } catch (error) {
