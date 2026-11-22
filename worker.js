@@ -647,17 +647,31 @@ async function handleImages(request, env) {
   const url = new URL(request.url);
   const name = url.searchParams.get("name");
   if (name) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(name)) {
+      return errorResponse("Некорректное имя изображения.");
+    }
+
     const image = await env.DB.prepare(
       "SELECT mime_type, file_data FROM site_images WHERE name = ?",
     ).bind(name).first();
-    if (!image) return errorResponse("Изображение не найдено.", 404);
-    return new Response(image.file_data, {
-      headers: {
-        "content-type": image.mime_type,
-        "cache-control": "no-store",
-        "x-content-type-options": "nosniff",
-      },
-    });
+    if (image) {
+      return new Response(image.file_data, {
+        headers: {
+          "content-type": image.mime_type,
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
+
+    const assetUrl = new URL(`/images/${name}`, url.origin);
+    const asset = await env.ASSETS.fetch(new Request(assetUrl));
+    if (!asset.ok) return errorResponse("Изображение не найдено.", 404);
+
+    const headers = new Headers(asset.headers);
+    headers.set("cache-control", "no-store");
+    headers.set("x-content-type-options", "nosniff");
+    return new Response(asset.body, { status: asset.status, headers });
   }
 
   const [manifest, uploaded] = await Promise.all([
