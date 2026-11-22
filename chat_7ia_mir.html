@@ -178,9 +178,13 @@
 
   .user-item {
     display: flex;
+    width: 100%;
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     background: rgba(255, 248, 231, 0.55);
     border: 2px solid #b89867;
     border-radius: 10px;
@@ -249,6 +253,7 @@
   }
 
   .status-indicator {
+    display: block;
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -2686,14 +2691,16 @@
 
     onlineUsers.forEach(u => {
       const isSelected = u.id === selectedTargetId;
-      const item = document.createElement('div');
+      const item = document.createElement('button');
+      item.type = 'button';
       item.className = 'user-item' + (isSelected ? ' active' : '');
+      item.setAttribute('aria-pressed', String(isSelected));
       item.innerHTML = `
-        <div class="user-info">
+        <span class="user-info">
           <span class="user-label">${u.label}</span>
           ${isSelected ? '<span class="active-chat-tag">➔ Активный чат</span>' : ''}
-        </div>
-        <div class="status-indicator ${u.online ? 'online' : ''}" title="${u.online ? 'В сети' : 'Не в сети'}"></div>
+        </span>
+        <span class="status-indicator ${u.online ? 'online' : ''}" title="${u.online ? 'В сети' : 'Не в сети'}"></span>
       `;
       item.addEventListener('click', () => {
         selectedTargetId = u.id;
@@ -2704,7 +2711,9 @@
       onlineListEl.appendChild(item);
     });
 
-    document.getElementById('onlineCountLabel').textContent =
+    const onlineCountLabel = document.getElementById('onlineCountLabel');
+    onlineCountLabel.title = '';
+    onlineCountLabel.textContent =
       `Анонимная связь. В сети: ${1 + onlineUsers.filter(user => user.id !== 'ALL' && user.online).length} ID`;
   }
 
@@ -2714,6 +2723,7 @@
       onlineUsers.push({
         id: targetId,
         label: `ID ${targetId}`,
+        role: targetId === '1003' ? 'admin' : 'user',
         avatar: '',
         online: false,
         strictNoSave: false
@@ -2760,11 +2770,16 @@
 
       const contacts = result.users
         .filter(user => user && user.id !== undefined)
-        .map(user => ({ id: String(user.id), online: Boolean(user.online) }))
+        .map(user => ({
+          id: String(user.id),
+          role: user.role === 'admin' ? 'admin' : 'user',
+          online: Boolean(user.online)
+        }))
         .filter(user => /^\d{1,10}$/.test(user.id) && user.id !== myId)
         .map(user => ({
           id: user.id,
           label: `ID ${user.id}`,
+          role: user.role,
           avatar: '',
           online: user.online,
           strictNoSave: false
@@ -2774,6 +2789,9 @@
       updateRoomHeader();
       lastPresenceErrorAt = 0;
     } catch (error) {
+      const onlineCountLabel = document.getElementById('onlineCountLabel');
+      onlineCountLabel.textContent = 'Нет связи с сервером';
+      onlineCountLabel.title = error.message;
       if (Date.now() - lastPresenceErrorAt > 30000) {
         console.error('Не удалось обновить список пользователей онлайн:', error);
         lastPresenceErrorAt = Date.now();
@@ -2785,7 +2803,7 @@
 
   renderOnlineList();
   refreshOnlineUsers();
-  window.setInterval(refreshOnlineUsers, 8000);
+  window.setInterval(refreshOnlineUsers, 15000);
 
   /********************************************************************
    * 2, 3. ЛОГИКА ОПЦИЙ СОХРАНЕНИЯ И ЧЁРНО-ЖЁЛТАЯ ПЛАШКА ПОД ЧАТОМ

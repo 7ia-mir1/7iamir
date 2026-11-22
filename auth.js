@@ -153,7 +153,7 @@
       return null;
     }
     sendPresenceHeartbeat();
-    window.setInterval(sendPresenceHeartbeat, 20000);
+    window.setInterval(sendPresenceHeartbeat, 15000);
     if (isAdminPage) revealAdminInterface();
 
     localStorage.setItem(USER_ID_KEY, user.id);

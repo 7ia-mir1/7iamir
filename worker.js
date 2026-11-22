@@ -33,7 +33,7 @@ function boundedLimit(value, fallback = 50) {
 
 const SESSION_COOKIE_NAME = "gornitsa_session";
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const PRESENCE_TTL_SECONDS = 60;
+const PRESENCE_TTL_SECONDS = 180;
 const PASSWORD_HASH_ITERATIONS = 100000;
 const RESET_CODE_TTL_SECONDS = 10 * 60;
 const RESET_CODE_COOLDOWN_SECONDS = 60;
@@ -435,31 +435,30 @@ async function handlePresence(request, env, session) {
   }
 
   const result = await env.DB.prepare(
-    `SELECT users.id AS id,
-            CASE
-              WHEN presence.last_seen_at >= ?
-                AND EXISTS (
-                  SELECT 1 FROM auth_sessions
-                  WHERE auth_sessions.user_id = users.id
-                    AND auth_sessions.expires_at > ?
-                )
-              THEN 1 ELSE 0
-            END AS online
+    `SELECT users.id AS id, users.role AS role
      FROM users
      LEFT JOIN online_presence AS presence ON presence.user_id = users.id
      WHERE users.id <> ?
+       AND (
+         presence.last_seen_at >= ?
+         OR EXISTS (
+           SELECT 1 FROM auth_sessions
+           WHERE auth_sessions.user_id = users.id
+             AND auth_sessions.expires_at > ?
+         )
+       )
      ORDER BY users.id`,
-  ).bind(now - PRESENCE_TTL_SECONDS, now, session.id).all();
+  ).bind(session.id, now - PRESENCE_TTL_SECONDS, now).all();
 
   const users = result.results.map(user => ({
     id: user.id,
-    online: Boolean(user.online),
+    role: user.role,
+    online: true,
   }));
-  const onlineCount = users.reduce((count, user) => count + Number(user.online), 1);
 
   return jsonResponse({
     users,
-    online_count: onlineCount,
+    online_count: users.length + 1,
   });
 }
 
