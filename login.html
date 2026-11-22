@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — Сказочная Горница</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            display: grid;
+            place-items: center;
+            color: #fff2cc;
+            background: radial-gradient(circle at 50% 30%, #553419 0%, #211208 55%, #090503 100%);
+            font-family: Georgia, "Times New Roman", serif;
+        }
+        .login-card {
+            width: min(440px, 100%);
+            padding: 28px;
+            background: linear-gradient(145deg, rgba(67, 39, 18, .98), rgba(31, 17, 8, .99));
+            border: 2px solid #d4af37;
+            border-radius: 16px;
+            box-shadow: inset 0 0 30px rgba(212, 175, 55, .12), 0 18px 50px #000b;
+        }
+        h1 { margin: 0 0 8px; color: #ffe599; text-align: center; font-size: 26px; }
+        .subtitle { margin: 0 0 22px; color: #dbc69c; text-align: center; }
+        label { display: block; margin: 14px 0 6px; color: #f3d58b; font-weight: bold; }
+        input {
+            width: 100%;
+            min-height: 42px;
+            padding: 9px 11px;
+            color: #2b1708;
+            background: #fffaf0;
+            border: 1px solid #d4af37;
+            border-radius: 7px;
+            font: 16px Georgia, serif;
+        }
+        button {
+            min-height: 42px;
+            padding: 9px 14px;
+            color: #fff2cc;
+            background: linear-gradient(#70451d, #40240e);
+            border: 1px solid #d4af37;
+            border-radius: 8px;
+            font: bold 15px Georgia, serif;
+            cursor: pointer;
+        }
+        button:hover:not(:disabled) { filter: brightness(1.15); }
+        button:disabled { opacity: .58; cursor: not-allowed; }
+        .primary { width: 100%; margin-top: 20px; color: #ffe599; }
+        .links { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; }
+        a { color: #ffe599; }
+        .message { min-height: 22px; margin: 12px 0 0; color: #ffe599; line-height: 1.4; }
+        .recovery { margin-top: 20px; padding-top: 16px; border-top: 1px solid #9a702c; }
+        .recovery[hidden], form[hidden] { display: none; }
+        .registration-note { margin: 14px 0 0; color: #cbb98f; text-align: center; font-size: 13px; }
+        @media (max-width: 480px) { .login-card { padding: 22px 18px; } }
+    </style>
+</head>
+<body>
+    <main class="login-card">
+        <h1>Сказочная Горница</h1>
+        <p class="subtitle">Войдите, чтобы продолжить</p>
+
+        <form id="loginForm">
+            <label for="loginEmail">Электронная почта</label>
+            <input id="loginEmail" type="email" autocomplete="username" maxlength="254" required>
+            <label for="loginPassword">Пароль</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" maxlength="128" required>
+            <button class="primary" type="submit">Войти</button>
+            <div class="links">
+                <a href="#" id="forgotLink">Забыли пароль?</a>
+                <button id="registerButton" type="button" disabled title="Регистрация будет доступна позже">Регистрация</button>
+            </div>
+            <p class="registration-note">Регистрация будет доступна позже</p>
+        </form>
+
+        <section class="recovery" id="recoveryPanel" hidden>
+            <form id="recoveryEmailForm">
+                <label for="recoveryEmail">Почта для восстановления</label>
+                <input id="recoveryEmail" type="email" autocomplete="email" maxlength="254" required>
+                <button class="primary" type="submit">Отправить код</button>
+            </form>
+            <form id="resetPasswordForm" hidden>
+                <label for="recoveryCode">Код из письма</label>
+                <input id="recoveryCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+                <label for="newPassword">Новый пароль (не менее 8 символов)</label>
+                <input id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+                <button class="primary" type="submit">Сохранить новый пароль</button>
+            </form>
+        </section>
+        <p class="message" id="loginMessage" role="status" aria-live="polite"></p>
+    </main>
+
+    <script>
+        const messageElement = document.getElementById("loginMessage");
+        const recoveryPanel = document.getElementById("recoveryPanel");
+        const recoveryEmail = document.getElementById("recoveryEmail");
+        const resetPasswordForm = document.getElementById("resetPasswordForm");
+        const query = new URLSearchParams(location.search);
+
+        function setMessage(message, isError) {
+            messageElement.textContent = message;
+            messageElement.style.color = isError ? "#ffb6a8" : "#ffe599";
+        }
+
+        function safeDestination(role) {
+            const candidate = query.get("next") || "/index.html";
+            let destination;
+            try {
+                destination = new URL(candidate, location.origin);
+            } catch {
+                return "/index.html";
+            }
+            if (destination.origin !== location.origin ||
+                !destination.pathname.startsWith("/") ||
+                destination.pathname === "/login.html") {
+                return "/index.html";
+            }
+            if (role !== "admin" && destination.pathname === "/admin.html") {
+                return "/index.html";
+            }
+            return `${destination.pathname}${destination.search}${destination.hash}`;
+        }
+
+        async function authRequest(path, body) {
+            const response = await fetch(path, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify(body),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+            return result;
+        }
+
+        document.getElementById("loginForm").addEventListener("submit", async event => {
+            event.preventDefault();
+            const button = event.currentTarget.querySelector("button[type=submit]");
+            button.disabled = true;
+            try {
+                const result = await authRequest("/api/auth/login", {
+                    email: document.getElementById("loginEmail").value,
+                    password: document.getElementById("loginPassword").value,
+                });
+                localStorage.setItem("GORNITSA_USER_ID", result.user.id);
+                sessionStorage.setItem("7ia_my_id", result.user.id);
+                localStorage.removeItem("GORNITSA_ADMIN_MODE");
+                sessionStorage.removeItem("GORNITSA_ADMIN_MODE");
+                location.replace(safeDestination(result.user.role));
+            } catch (error) {
+                setMessage(error.message, true);
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById("forgotLink").addEventListener("click", event => {
+            event.preventDefault();
+            recoveryPanel.hidden = false;
+            document.getElementById("resetPasswordForm").hidden = true;
+            recoveryEmail.value = document.getElementById("loginEmail").value;
+            recoveryEmail.focus();
+        });
+
+        document.getElementById("recoveryEmailForm").addEventListener("submit", async event => {
+            event.preventDefault();
+            const button = event.currentTarget.querySelector("button[type=submit]");
+            button.disabled = true;
+            try {
+                const result = await authRequest("/api/auth/forgot-password", {
+                    email: recoveryEmail.value,
+                });
+                setMessage(result.message, false);
+                resetPasswordForm.hidden = false;
+                document.getElementById("recoveryCode").focus();
+            } catch (error) {
+                setMessage(error.message, true);
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        resetPasswordForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const button = event.currentTarget.querySelector("button[type=submit]");
+            button.disabled = true;
+            try {
+                const result = await authRequest("/api/auth/reset-password", {
+                    email: recoveryEmail.value,
+                    code: document.getElementById("recoveryCode").value,
+                    password: document.getElementById("newPassword").value,
+                });
+                setMessage(result.message, false);
+                resetPasswordForm.reset();
+                resetPasswordForm.hidden = true;
+            } catch (error) {
+                setMessage(error.message, true);
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" })
+            .then(response => response.ok ? response.json() : null)
+            .then(result => {
+                if (result && result.user) location.replace(safeDestination(result.user.role));
+            })
+            .catch(error => console.warn("Не удалось проверить сохранённую сессию.", error));
+    </script>
+</body>
+</html>

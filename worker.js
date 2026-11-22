@@ -31,10 +31,389 @@ function boundedLimit(value, fallback = 50) {
   return Number.isInteger(parsed) ? Math.min(Math.max(parsed, 1), 100) : fallback;
 }
 
+const SESSION_COOKIE_NAME = "gornitsa_session";
+const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+const PASSWORD_HASH_ITERATIONS = 210000;
+const RESET_CODE_TTL_SECONDS = 10 * 60;
+const RESET_CODE_COOLDOWN_SECONDS = 60;
+const SEEDED_ACCOUNTS = [
+  {
+    id: "1001",
+    email: "olvet9999@gmail.com",
+    role: "user",
+    passwordHash: "pbkdf2_sha256$210000$LaxjowQ1KGPlDPyaj+CWqg==$W+Cycg07fYGVqITc+CMvC+L3t5Ky3MGBJXoRgbiYtGI=",
+  },
+  {
+    id: "1002",
+    email: "king.kingparadise@gmail.com",
+    role: "user",
+    passwordHash: "pbkdf2_sha256$210000$yWZZ9zAkeSFDF37oTka0oA==$smd2LZ7lIpdwV3UhuJY/RK9xPt2GqdCzYIm0qA5g1+w=",
+  },
+  {
+    id: "1003",
+    email: "tataole@gmail.com",
+    role: "admin",
+    passwordHash: "pbkdf2_sha256$210000$6SMep+FpV+hb/Jl1LPxUtg==$elbu/zMBuKXGnU0+Ww25kag+lZVLpZls4vIKOPT3lj0=",
+  },
+];
+const accountSeedPromises = new WeakMap();
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  try {
+    return Uint8Array.from(atob(value), character => character.charCodeAt(0));
+  } catch {
+    return null;
+  }
+}
+
+async function derivePasswordHash(password, salt, iterations = PASSWORD_HASH_ITERATIONS) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+    key,
+    256,
+  );
+  return bytesToBase64(new Uint8Array(bits));
+}
+
+async function createPasswordHash(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await derivePasswordHash(password, salt);
+  return `pbkdf2_sha256$${PASSWORD_HASH_ITERATIONS}$${bytesToBase64(salt)}$${hash}`;
+}
+
+async function verifyPassword(password, encodedHash) {
+  if (typeof encodedHash !== "string") return false;
+  const [algorithm, iterationsText, saltText, expectedHash] = encodedHash.split("$");
+  const iterations = Number(iterationsText);
+  const salt = base64ToBytes(saltText || "");
+  if (algorithm !== "pbkdf2_sha256" ||
+      !Number.isInteger(iterations) || iterations < 100000 || iterations > 500000 ||
+      !salt || !expectedHash) {
+    return false;
+  }
+  const actualHash = await derivePasswordHash(password, salt, iterations);
+  const actual = new TextEncoder().encode(actualHash);
+  const expected = new TextEncoder().encode(expectedHash);
+  if (actual.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < actual.length; index += 1) {
+    difference |= actual[index] ^ expected[index];
+  }
+  return difference === 0;
+}
+
+async function digestBase64(value) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return bytesToBase64(new Uint8Array(bytes));
+}
+
+async function ensureSeedAccounts(env) {
+  let pending = accountSeedPromises.get(env);
+  if (!pending) {
+    pending = (async () => {
+      const now = Math.floor(Date.now() / 1000);
+      for (const account of SEEDED_ACCOUNTS) {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO users
+           (id, email, password_hash, role, coins, updated_at)
+           VALUES (?, ?, ?, ?, 800, ?)`,
+        ).bind(
+          account.id,
+          account.email,
+          account.passwordHash,
+          account.role,
+          now,
+        ).run();
+      }
+    })();
+    accountSeedPromises.set(env, pending);
+    pending.catch(() => accountSeedPromises.delete(env));
+  }
+  return pending;
+}
+
+function readSessionToken(request) {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const cookie = cookieHeader.split(";").map(item => item.trim())
+    .find(item => item.startsWith(`${SESSION_COOKIE_NAME}=`));
+  return cookie ? cookie.slice(SESSION_COOKIE_NAME.length + 1) : "";
+}
+
+async function getAuthSession(request, env) {
+  const token = readSessionToken(request);
+  if (!/^[A-Za-z0-9_-]{40,60}$/.test(token)) return null;
+  const sessionHash = await digestBase64(token);
+  const now = Math.floor(Date.now() / 1000);
+  const result = await env.DB.prepare(
+    `SELECT users.id, users.email, users.role, auth_sessions.expires_at
+     FROM auth_sessions JOIN users ON users.id = auth_sessions.user_id
+     WHERE auth_sessions.session_hash = ? AND auth_sessions.expires_at > ?`,
+  ).bind(sessionHash, now).first();
+  if (!result) return null;
+  return { id: result.id, email: result.email, role: result.role };
+}
+
+function sessionCookie(request, token, maxAge) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${SESSION_COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+}
+
+function authJsonResponse(data, status, headers = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...JSON_HEADERS, ...headers },
+  });
+}
+
+function isSameOriginRequest(request) {
+  const origin = request.headers.get("origin");
+  return origin === new URL(request.url).origin;
+}
+
+async function loginRateLimit(env, request, email) {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const key = await digestBase64(`${ip}\n${email}`);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    "DELETE FROM auth_login_attempts WHERE window_started_at <= ?",
+  ).bind(now - 900).run();
+  const current = await env.DB.prepare(
+    "SELECT attempts, window_started_at FROM auth_login_attempts WHERE attempt_key = ?",
+  ).bind(key).first();
+  if (current && current.window_started_at > now - 900 && current.attempts >= 10) {
+    return { key, limited: true };
+  }
+  if (!current || current.window_started_at <= now - 900) {
+    await env.DB.prepare(
+      `INSERT INTO auth_login_attempts (attempt_key, attempts, window_started_at)
+       VALUES (?, 1, ?)
+       ON CONFLICT(attempt_key) DO UPDATE SET attempts = 1, window_started_at = excluded.window_started_at`,
+    ).bind(key, now).run();
+  } else {
+    await env.DB.prepare(
+      "UPDATE auth_login_attempts SET attempts = attempts + 1 WHERE attempt_key = ?",
+    ).bind(key).run();
+  }
+  return { key, limited: false };
+}
+
+function newSessionToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function newRecoveryCode() {
+  const value = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
+  return String(value).padStart(6, "0");
+}
+
+async function sendRecoveryEmail(env, email, code) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.RESEND_FROM_EMAIL,
+      to: [email],
+      subject: "Код восстановления пароля",
+      text: `Ваш код восстановления: ${code}. Он действует 10 минут.`,
+    }),
+  });
+  return response.ok;
+}
+
+async function handleAuth(request, env, pathname) {
+  await ensureSeedAccounts(env);
+
+  if (pathname === "/api/auth/me") {
+    if (request.method !== "GET") return errorResponse("Метод не поддерживается.", 405);
+    const user = await getAuthSession(request, env);
+    return user
+      ? authJsonResponse({ user }, 200)
+      : errorResponse("Требуется вход.", 401);
+  }
+
+  if (request.method !== "POST") return errorResponse("Метод не поддерживается.", 405);
+  if (!isSameOriginRequest(request)) return errorResponse("Запрос с другого источника запрещён.", 403);
+  const body = await readJson(request);
+  if (!body) return errorResponse("Ожидается JSON-объект.");
+
+  if (pathname === "/api/auth/login") {
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
+        !password || password.length > 128) {
+      return errorResponse("Проверьте адрес электронной почты и пароль.");
+    }
+
+    const attempt = await loginRateLimit(env, request, email);
+    if (attempt.limited) return errorResponse("Слишком много попыток. Попробуйте через 15 минут.", 429);
+
+    const user = await env.DB.prepare(
+      "SELECT id, email, password_hash, role FROM users WHERE email = ?",
+    ).bind(email).first();
+    const hashToCheck = user ? user.password_hash : SEEDED_ACCOUNTS[0].passwordHash;
+    const valid = await verifyPassword(password, hashToCheck);
+    if (!user || !valid) {
+      return errorResponse("Неверный адрес электронной почты или пароль.", 401);
+    }
+
+    await env.DB.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?")
+      .bind(attempt.key).run();
+    const token = newSessionToken();
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").bind(now).run();
+    await env.DB.prepare(
+      "INSERT INTO auth_sessions (session_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
+    ).bind(
+      await digestBase64(token),
+      user.id,
+      now + SESSION_TTL_SECONDS,
+      now,
+    ).run();
+
+    return authJsonResponse(
+      { user: { id: user.id, email: user.email, role: user.role } },
+      200,
+      { "set-cookie": sessionCookie(request, token, SESSION_TTL_SECONDS) },
+    );
+  }
+
+  if (pathname === "/api/auth/logout") {
+    const token = readSessionToken(request);
+    if (token) {
+      await env.DB.prepare("DELETE FROM auth_sessions WHERE session_hash = ?")
+        .bind(await digestBase64(token)).run();
+    }
+    return authJsonResponse(
+      { status: "ok" },
+      200,
+      { "set-cookie": sessionCookie(request, "", 0) },
+    );
+  }
+
+  if (pathname === "/api/auth/forgot-password") {
+    if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+      return errorResponse("Восстановление временно недоступно: настройте почтовый сервис.", 503);
+    }
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      return errorResponse("Введите корректный адрес электронной почты.");
+    }
+    const user = await env.DB.prepare(
+      "SELECT id FROM users WHERE email = ?",
+    ).bind(email).first();
+    if (!user) {
+      return authJsonResponse(
+        { message: "Если адрес зарегистрирован, код восстановления будет отправлен." },
+        202,
+      );
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const previous = await env.DB.prepare(
+      "SELECT requested_at FROM password_reset_codes WHERE user_id = ?",
+    ).bind(user.id).first();
+    if (previous && previous.requested_at > now - RESET_CODE_COOLDOWN_SECONDS) {
+      return authJsonResponse(
+        { message: "Если адрес зарегистрирован, код восстановления будет отправлен." },
+        202,
+      );
+    }
+
+    const code = newRecoveryCode();
+    await env.DB.prepare(
+      `INSERT INTO password_reset_codes (user_id, code_hash, expires_at, requested_at, attempts)
+       VALUES (?, ?, ?, ?, 0)
+       ON CONFLICT(user_id) DO UPDATE SET
+         code_hash = excluded.code_hash,
+         expires_at = excluded.expires_at,
+         requested_at = excluded.requested_at,
+         attempts = 0`,
+    ).bind(
+      user.id,
+      await createPasswordHash(code),
+      now + RESET_CODE_TTL_SECONDS,
+      now,
+    ).run();
+    try {
+      if (!await sendRecoveryEmail(env, email, code)) {
+        throw new Error("Почтовый сервис отклонил запрос.");
+      }
+    } catch (error) {
+      await env.DB.prepare("DELETE FROM password_reset_codes WHERE user_id = ?")
+        .bind(user.id).run();
+      console.error("Не удалось отправить письмо восстановления.", error);
+      return errorResponse("Не удалось отправить письмо. Проверьте настройки почты.", 502);
+    }
+    return authJsonResponse(
+      { message: "Если адрес зарегистрирован, код восстановления будет отправлен." },
+      202,
+    );
+  }
+
+  if (pathname === "/api/auth/reset-password") {
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const code = typeof body.code === "string" ? body.code.trim() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(code) ||
+        password.length < 8 || password.length > 128) {
+      return errorResponse("Укажите почту, шестизначный код и новый пароль (не менее 8 символов).");
+    }
+    const user = await env.DB.prepare(
+      "SELECT id FROM users WHERE email = ?",
+    ).bind(email).first();
+    if (!user) return errorResponse("Код недействителен или срок его действия истёк.", 400);
+    const reset = await env.DB.prepare(
+      "SELECT code_hash, expires_at, attempts FROM password_reset_codes WHERE user_id = ?",
+    ).bind(user.id).first();
+    const now = Math.floor(Date.now() / 1000);
+    if (!reset || reset.expires_at <= now || reset.attempts >= 5) {
+      return errorResponse("Код недействителен или срок его действия истёк.", 400);
+    }
+    await env.DB.prepare(
+      "UPDATE password_reset_codes SET attempts = attempts + 1 WHERE user_id = ?",
+    ).bind(user.id).run();
+    if (!await verifyPassword(code, reset.code_hash)) {
+      return errorResponse("Код недействителен или срок его действия истёк.", 400);
+    }
+
+    const consumed = await env.DB.prepare(
+      "DELETE FROM password_reset_codes WHERE user_id = ? AND code_hash = ? AND expires_at > ?",
+    ).bind(user.id, reset.code_hash, now).run();
+    if (!consumed.meta.changes) {
+      return errorResponse("Код недействителен или срок его действия истёк.", 400);
+    }
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?")
+        .bind(await createPasswordHash(password), now, user.id),
+      env.DB.prepare("DELETE FROM auth_sessions WHERE user_id = ?").bind(user.id),
+    ]);
+    return authJsonResponse({ status: "ok", message: "Пароль обновлён. Теперь войдите с новым паролем." }, 200);
+  }
+
+  return errorResponse("Маршрут авторизации не найден.", 404);
+}
+
 const MAX_YAGA_HISTORY_MESSAGES = 36;
 const MAX_YAGA_HISTORY_CHARS = 32000;
 
-async function handleChat(request, env) {
+async function handleChat(request, env, session) {
   if (request.method === "GET") {
     const now = Math.floor(Date.now() / 1000);
     await env.DB.prepare(
@@ -42,10 +421,7 @@ async function handleChat(request, env) {
     ).bind(now).run();
 
     const url = new URL(request.url);
-    const userId = url.searchParams.get("user_id");
-    if (!userId || !/^\d{1,10}$/.test(userId)) {
-      return errorResponse("Укажите корректный user_id.", 400);
-    }
+    const userId = session.id;
     const limit = boundedLimit(url.searchParams.get("limit"));
     const result = await env.DB.prepare(
       `SELECT id, sender_id, target_id, text, file_url, file_name,
@@ -66,14 +442,17 @@ async function handleChat(request, env) {
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
     if (id) {
+      const message = await env.DB.prepare(
+        "SELECT sender_id, target_id FROM chat_messages WHERE id = ?",
+      ).bind(id).first();
+      if (message && message.sender_id !== session.id && message.target_id !== session.id) {
+        return errorResponse("Нельзя удалить сообщение другого пользователя.", 403);
+      }
       await env.DB.prepare("DELETE FROM chat_messages WHERE id = ?").bind(id).run();
     } else {
-      const userId = url.searchParams.get("user_id");
-      if (!userId || !/^\d{1,10}$/.test(userId)) {
-        return errorResponse("Укажите корректный user_id.", 400);
-      }
+      const userId = session.id;
       await env.DB.prepare(
-        "DELETE FROM chat_messages WHERE target_id = 'ALL' OR sender_id = ? OR target_id = ?",
+        "DELETE FROM chat_messages WHERE sender_id = ? OR target_id = ?",
       ).bind(userId, userId).run();
     }
     return jsonResponse({ status: "ok" });
@@ -83,7 +462,7 @@ async function handleChat(request, env) {
     const body = await readJson(request);
     if (!body) return errorResponse("Ожидается JSON-объект.");
 
-    const senderId = typeof body.sender_id === "string" ? body.sender_id.trim() : "";
+    const senderId = session.id;
     const text = typeof body.text === "string" ? body.text.trim() : "";
     const targetId = typeof body.target_id === "string" ? body.target_id.trim() : "ALL";
     const fileUrl = typeof body.file_url === "string" ? body.file_url.trim() : null;
@@ -437,14 +816,12 @@ async function handleMedia(request, env) {
   return errorResponse("Метод не поддерживается.", 405);
 }
 
-async function handleCoins(request, env) {
+async function handleCoins(request, env, session) {
   const url = new URL(request.url);
 
   if (request.method === "GET") {
-    const userId = url.searchParams.get("user_id");
-    if (!userId || userId.length > 100) {
-      return errorResponse("Укажите user_id.");
-    }
+    const requestedId = url.searchParams.get("user_id");
+    const userId = session.role === "admin" && requestedId ? requestedId : session.id;
     const user = await env.DB.prepare(
       "SELECT id, coins, updated_at FROM users WHERE id = ?",
     ).bind(userId).first();
@@ -750,13 +1127,54 @@ async function handleAdminImages(request, env) {
 
 export default {
   async fetch(request, env) {
-    const { pathname } = new URL(request.url);
+    const requestUrl = new URL(request.url);
+    const { pathname } = requestUrl;
 
     try {
-      if (pathname === "/api/chat") return await handleChat(request, env);
+      if (pathname.startsWith("/api/auth/")) {
+        return await handleAuth(request, env, pathname);
+      }
+
+      const isApiRequest = pathname.startsWith("/api/");
+      const isHtmlPage =
+        pathname === "/" ||
+        (/\.html?$/i.test(pathname) && pathname !== "/login.html");
+      const isProtectedResource =
+        isHtmlPage ||
+        (pathname.startsWith("/content/") && pathname.endsWith(".json")) ||
+        pathname.startsWith("/images/");
+      let session = null;
+      if (isApiRequest || isProtectedResource) {
+        session = await getAuthSession(request, env);
+        if (!session) {
+          if (isHtmlPage) {
+            const loginUrl = new URL("/login.html", request.url);
+            loginUrl.searchParams.set("next", `${pathname}${requestUrl.search}`);
+            return Response.redirect(loginUrl, 302);
+          }
+          return errorResponse("Требуется вход.", 401);
+        }
+      }
+
+      const adminOnly =
+        pathname.startsWith("/api/admin/") ||
+        (pathname === "/api/media" && request.method !== "GET") ||
+        (pathname === "/api/coins" && request.method !== "GET") ||
+        pathname === "/admin.html";
+      if (adminOnly && session.role !== "admin") {
+        if (pathname === "/admin.html") {
+          return Response.redirect(new URL("/index.html?denied=admin", request.url), 302);
+        }
+        return errorResponse("Требуются права администратора.", 403);
+      }
+      if (isApiRequest && request.method !== "GET" && !isSameOriginRequest(request)) {
+        return errorResponse("Запрос с другого источника запрещён.", 403);
+      }
+
+      if (pathname === "/api/chat") return await handleChat(request, env, session);
       if (pathname === "/api/yaga-chat") return await handleYagaChat(request, env);
       if (pathname === "/api/media") return await handleMedia(request, env);
-      if (pathname === "/api/coins") return await handleCoins(request, env);
+      if (pathname === "/api/coins") return await handleCoins(request, env, session);
       if (pathname === "/api/content") return await handleContent(request, env);
       if (pathname === "/api/admin/content") return await handleAdminContent(request, env);
       if (pathname === "/api/images") return await handleImages(request, env);

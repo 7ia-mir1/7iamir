@@ -393,7 +393,7 @@
             return;
           }
         }
-        const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+        const raw = localStorage.getItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'));
         if (raw) {
           const st = JSON.parse(raw);
           if (typeof st.bankBalance === 'number') {
@@ -415,7 +415,7 @@
         if (window.GornitsaWallet && typeof GornitsaWallet.earnToBank === 'function') {
           GornitsaWallet.earnToBank(coins, reason);
         } else {
-          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'));
           const st = raw ? JSON.parse(raw) : { bankBalance: 800, cashBalance: 0, transactions: [] };
           st.bankBalance = (st.bankBalance || 0) + coins;
           st.transactions = st.transactions || [];
@@ -426,7 +426,7 @@
             amount: coins,
             title: reason
           });
-          localStorage.setItem('GORNITSA_ECONOMY_V1', JSON.stringify(st));
+          localStorage.setItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'), JSON.stringify(st));
         }
       } catch (e) {}
       updateBankDisplay();
@@ -443,7 +443,7 @@
         if (window.GornitsaWallet && typeof GornitsaWallet.deductFromBank === 'function') {
           GornitsaWallet.deductFromBank(coins, reason);
         } else {
-          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'));
           const st = raw ? JSON.parse(raw) : { bankBalance: 800, cashBalance: 0, transactions: [] };
           st.bankBalance = Math.max(0, (st.bankBalance || 0) - coins);
           st.transactions = st.transactions || [];
@@ -454,7 +454,7 @@
             amount: coins,
             title: reason
           });
-          localStorage.setItem('GORNITSA_ECONOMY_V1', JSON.stringify(st));
+          localStorage.setItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'), JSON.stringify(st));
         }
       } catch (e) {}
       updateBankDisplay();
@@ -806,5 +806,6 @@
     window.addEventListener('gornitsaWalletUpdated', updateBankDisplay);
     window.addEventListener('focus', updateBankDisplay);
   </script>
+    <script src="auth.js"></script>
 </body>
 </html>

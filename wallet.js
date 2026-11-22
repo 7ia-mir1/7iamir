@@ -12,7 +12,7 @@
  */
 
 (function (window) {
-    const STORAGE_KEY = 'GORNITSA_ECONOMY_V1';
+    const STORAGE_KEY = `GORNITSA_ECONOMY_V1_${localStorage.getItem('GORNITSA_USER_ID') || 'guest'}`;
 
     function getCurrentMonthKey() {
         const d = new Date();

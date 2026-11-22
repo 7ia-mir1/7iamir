@@ -663,6 +663,7 @@
         function adminResetAll() {
             if (!confirm('Сбросить всё?')) return;
             localStorage.removeItem('GORNITSA_ECONOMY_V1');
+            localStorage.removeItem(`GORNITSA_ECONOMY_V1_${localStorage.getItem('GORNITSA_USER_ID') || 'guest'}`);
             localStorage.removeItem(PROFILE_KEY);
             localStorage.removeItem(MATCHES_KEY);
             GornitsaWallet.init();
@@ -676,14 +677,13 @@
         }
 
         function enterSiteAsAdmin() {
-            sessionStorage.setItem('GORNITSA_ADMIN_MODE', '1');
-            localStorage.setItem('GORNITSA_ADMIN_MODE', '1');
-            window.location.href = 'index.html?admin=1';
+            window.location.href = 'index.html';
         }
 
         renderAdminUI();
         renderAdminMediaSection();
         window.addEventListener('gornitsaMediaUpdated', renderAdminMediaSection);
     </script>
+    <script src="auth.js"></script>
 </body>
 </html>

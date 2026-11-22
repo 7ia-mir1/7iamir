@@ -3,5 +3,7 @@
 .wrangler
 node_modules
 schema.sql
+migrations
+worker.js
 wrangler.toml
 wrangler.jsonc

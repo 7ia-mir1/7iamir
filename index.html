@@ -221,7 +221,7 @@
             <button class="nav-btn gender-toggle" onclick="toggleGender()" id="genderBtn">👤 Пол: Мужской</button>
             <button class="nav-btn edit-toggle" onclick="toggleEditMode()" id="editBtn" title="Позволяет мышкой передвинуть любую зону подсветки точно на нужное место">✋ Двигать зоны: ВЫКЛ</button>
             <button class="nav-btn admin-only-control" style="background:linear-gradient(to bottom,#4a280b,#241204);border-color:#ffd700;color:#ffd700;" onclick="window.location.href='admin.html'" title="Открыть Приказную Палату Администратора">👑 Админка</button>
-            <button class="nav-btn admin-only-control" style="background:linear-gradient(to bottom,#8b0000,#4a0000);border-color:#ffd700;color:#fff;" onclick="exitAdminMode()">🚪 Выйти из режима админа</button>
+            <button class="nav-btn admin-only-control" id="adminLogoutButton" style="background:linear-gradient(to bottom,#8b0000,#4a0000);border-color:#ffd700;color:#fff;">🚪 Выйти</button>
         </div>
 
         <canvas id="worldCanvas"></canvas>
@@ -251,34 +251,9 @@
     <script src="wallet.js"></script>
     <script src="media.js"></script>
     <script src="content/loader.js"></script>
+    <script src="auth.js"></script>
     <script>
         window.GornitsaContent.ready.then(() => window.GornitsaContent.applyLabels(document));
-
-        const adminUrlParam = new URLSearchParams(window.location.search).get('admin');
-        if (adminUrlParam === '1') {
-            sessionStorage.setItem('GORNITSA_ADMIN_MODE', '1');
-            localStorage.setItem('GORNITSA_ADMIN_MODE', '1');
-        } else if (adminUrlParam === '0') {
-            sessionStorage.removeItem('GORNITSA_ADMIN_MODE');
-            localStorage.removeItem('GORNITSA_ADMIN_MODE');
-        }
-
-        const adminModeActive = sessionStorage.getItem('GORNITSA_ADMIN_MODE') === '1'
-            || localStorage.getItem('GORNITSA_ADMIN_MODE') === '1';
-
-        if (!adminModeActive) {
-            const adminNav = document.getElementById('topNavBar');
-            const adminGear = document.getElementById('topGearBtn');
-            if (adminNav) adminNav.remove();
-            if (adminGear) adminGear.remove();
-        }
-
-        function exitAdminMode() {
-            sessionStorage.removeItem('GORNITSA_ADMIN_MODE');
-            localStorage.removeItem('GORNITSA_ADMIN_MODE');
-            const cleanUrl = window.location.pathname + '?admin=0';
-            window.location.href = cleanUrl;
-        }
 
         const canvas = document.getElementById('worldCanvas');
         const ctx = canvas.getContext('2d');

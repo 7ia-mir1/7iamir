@@ -2646,10 +2646,10 @@
   /********************************************************************
    * КОНФИГУРАЦИЯ И ОНЛАЙН ID
    ********************************************************************/
-  const STORAGE_KEY = '7ia_mir_chat_messages_v3';
+  const STORAGE_KEY = `7ia_mir_chat_messages_v3_${localStorage.getItem('GORNITSA_USER_ID') || 'guest'}`;
   const CHAT_API_URL = '/api/chat';
 
-  let myId = sessionStorage.getItem('7ia_my_id');
+  let myId = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id');
   if (!myId) {
     myId = String(Math.floor(1000 + Math.random() * 9000));
     sessionStorage.setItem('7ia_my_id', myId);
@@ -3427,5 +3427,6 @@
   loadMessagesFromServer();
   setInterval(loadMessagesFromServer, 3000);
 </script>
+    <script src="auth.js"></script>
 </body>
 </html>

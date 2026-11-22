@@ -389,7 +389,7 @@
         el.textContent = GornitsaWallet.state.bankBalance + ' мон.';
       } else {
         try {
-          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'));
           if (raw) {
             const st = JSON.parse(raw);
             if (typeof st.bankBalance === 'number') {
@@ -410,7 +410,7 @@
         GornitsaWallet.earnToBank(coins, reason);
       } else {
         try {
-          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1');
+          const raw = localStorage.getItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'));
           const st = raw ? JSON.parse(raw) : { bankBalance: 800, cashBalance: 0, history: [] };
           st.bankBalance = (st.bankBalance || 0) + coins;
           st.history = st.history || [];
@@ -420,7 +420,7 @@
             amount: coins,
             desc: reason
           });
-          localStorage.setItem('GORNITSA_ECONOMY_V1', JSON.stringify(st));
+          localStorage.setItem('GORNITSA_ECONOMY_V1_' + (localStorage.getItem('GORNITSA_USER_ID') || 'guest'), JSON.stringify(st));
         } catch (e) {}
       }
       updateBankDisplay();
@@ -769,5 +769,6 @@
     updateBankDisplay();
     renderBoard();
   </script>
+    <script src="auth.js"></script>
 </body>
 </html>
