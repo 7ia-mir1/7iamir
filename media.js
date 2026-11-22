@@ -194,6 +194,7 @@
         library: null,
         volumes: { gramophone: 80, bayun: 80, mirror: 85, cinema: 90 },
         apiSyncReady: false,
+        apiSyncPromise: null,
         activeCategory: 'mirror',
         activeIndex: 0,
         modalSettingsOpen: true,
@@ -229,20 +230,19 @@
             } catch (e) {
                 this.library = JSON.parse(JSON.stringify(defaultLibrary));
             }
-            this.syncFromApi();
+            this.apiSyncPromise = this.syncFromApi();
             return this.library;
         },
 
         syncFromApi: async function () {
             try {
-                const response = await fetch('/api/media', { cache: 'no-store' });
+                const response = await fetch('/api/media', {
+                    cache: 'no-store',
+                    credentials: 'same-origin'
+                });
                 if (!response.ok) throw new Error('API media unavailable');
                 const data = await response.json();
                 const remoteItems = Array.isArray(data.items) ? data.items : [];
-                if (remoteItems.length === 0) {
-                    this.apiSyncReady = true;
-                    return;
-                }
 
                 const remoteByCategory = { gramophone: [], bayun: [], mirror: [], cinema: [] };
                 for (const remote of remoteItems) {
@@ -271,6 +271,7 @@
                 this.apiSyncReady = true;
                 this.save();
             } catch (error) {
+                this.apiSyncReady = true;
                 console.warn('Не удалось загрузить общую медиатеку:', error);
             }
         },
@@ -889,7 +890,11 @@
         buildPlayerHTML: async function (item, category) {
             FairyTaleSynth.stop();
             if (!item || !item.url) {
-                return `<div style="padding:40px; text-align:center; color:#ffe599;">Нет активных записей для воспроизведения. Включите запись в настройках справа!</div>`;
+                const list = this.library[category || this.activeCategory] || [];
+                const message = list.length === 0
+                    ? 'Плейлист пока пуст'
+                    : 'Нет активных записей для воспроизведения. Включите запись в настройках справа!';
+                return `<div style="padding:40px; text-align:center; color:#ffe599;">${message}</div>`;
             }
 
             const vol = this.getVolume(category || this.activeCategory);
@@ -1022,6 +1027,7 @@
         openPlayerModal: function (category, startIndex) {
             this.stopBackgroundMusic();
             this.activeCategory = category || 'mirror';
+            const openedCategory = this.activeCategory;
             this.isModalFullscreen = false; // Сначала всегда нормальным окном!
             this.modalSettingsOpen = true;
 
@@ -1201,6 +1207,17 @@
             };
 
             this.renderModalContent();
+            if (this.apiSyncPromise && !this.apiSyncReady) {
+                this.apiSyncPromise.then(() => {
+                    if (document.getElementById('gornitsaMediaModal') !== overlay ||
+                        this.activeCategory !== openedCategory) return;
+                    const enabledAfterSync = this.getEnabledIndices(this.activeCategory);
+                    if (!enabledAfterSync.includes(this.activeIndex)) {
+                        this.activeIndex = enabledAfterSync.length > 0 ? enabledAfterSync[0] : 0;
+                    }
+                    this.renderModalContent();
+                });
+            }
         },
 
         renderModalPlayerOnly: async function () {
@@ -1240,6 +1257,13 @@
             if (!listBox) return;
 
             listBox.innerHTML = '';
+            if (list.length === 0) {
+                const emptyMessage = document.createElement('div');
+                emptyMessage.textContent = 'Плейлист пока пуст';
+                emptyMessage.style.cssText = 'padding:12px 8px; color:#ffe599; text-align:center; font-size:13px;';
+                listBox.appendChild(emptyMessage);
+                return;
+            }
             list.forEach((item, idx) => {
                 const isAct = (idx === this.activeIndex && !item.disabled);
                 const row = document.createElement('div');

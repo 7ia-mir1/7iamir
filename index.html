@@ -346,28 +346,24 @@
             window.location.href = 'detektiv.html';
         }
 
-        // Для Граммофона и Кота Баюна запускаем именно startBackgroundMusic (открывает нижнюю золотистую плашку плеера со скриншота!)
+        // Открываем общий список в модальном плеере; фоновый режим доступен из самого окна.
         function triggerAudioBar(section) {
-            if (window.GornitsaMedia) {
-                if (typeof GornitsaMedia.startBackgroundMusic === 'function') {
-                    GornitsaMedia.startBackgroundMusic(section);
-                    return;
-                }
-                if (typeof GornitsaMedia.openPlayerModal === 'function') {
-                    GornitsaMedia.openPlayerModal(section);
-                    return;
-                }
+            if (window.GornitsaMedia && typeof window.GornitsaMedia.openPlayerModal === 'function') {
+                window.GornitsaMedia.openPlayerModal(section);
+                return;
             }
-            showModal(section === 'gramophone' ? "Старинный граммофон" : "Кот Баюн", "Запуск музыкального проигрывателя...");
+            console.error('Модуль медиаплеера не загружен.');
+            showModal(section === 'gramophone' ? "Старинный граммофон" : "Кот Баюн", "Медиаплеер временно недоступен. Обновите страницу и попробуйте снова.");
         }
 
         // Для Зеркала и Кинотеатра открываем видеоплеер
         function triggerVideoModal(section) {
-            if (window.GornitsaMedia && typeof GornitsaMedia.openPlayerModal === 'function') {
-                GornitsaMedia.openPlayerModal(section);
+            if (window.GornitsaMedia && typeof window.GornitsaMedia.openPlayerModal === 'function') {
+                window.GornitsaMedia.openPlayerModal(section);
                 return;
             }
-            showModal("modal.title.01", "modal.text.01");
+            console.error('Модуль медиаплеера не загружен.');
+            showModal("Зеркало", "Медиаплеер временно недоступен. Обновите страницу и попробуйте снова.");
         }
 
         // У Лешего — только окно Диагностики (20 монет за каждую диагностику)
