@@ -475,6 +475,265 @@ async function handleCoins(request, env) {
   return errorResponse("Метод не поддерживается.", 405);
 }
 
+async function readAssetJson(env, request, pathname) {
+  const assetUrl = new URL(pathname, request.url);
+  const response = await env.ASSETS.fetch(new Request(assetUrl));
+  if (!response.ok) {
+    throw new Error(`Unable to load static resource: ${pathname}`);
+  }
+  return response.json();
+}
+
+async function handleContent(request, env) {
+  if (request.method !== "GET") {
+    return errorResponse("Метод не поддерживается.", 405);
+  }
+
+  const url = new URL(request.url);
+  const category = url.searchParams.get("category");
+  if (category && !["texts", "labels", "book"].includes(category)) {
+    return errorResponse("Неизвестная категория контента.");
+  }
+
+  if (category === "book") {
+    const book = await readAssetJson(env, request, "/content/book.json");
+    const overrides = await env.DB.prepare(
+      "SELECT content_key, value, is_deleted FROM site_content WHERE category = 'book'",
+    ).all();
+    const pages = Array.isArray(book.pages) ? book.pages : [];
+    let toc = Array.isArray(book.toc) ? book.toc : [];
+
+    for (const override of overrides.results) {
+      if (override.is_deleted) {
+        if (override.content_key === "toc") {
+          toc = [];
+          continue;
+        }
+        const deletedPage = /^page:(\d{1,4})$/.exec(override.content_key);
+        if (deletedPage) {
+          const index = pages.findIndex(page => page.p === Number(deletedPage[1]));
+          if (index >= 0) pages.splice(index, 1);
+        }
+        continue;
+      }
+      if (override.content_key === "toc") {
+        toc = JSON.parse(override.value);
+        continue;
+      }
+      const pageMatch = /^page:(\d{1,4})$/.exec(override.content_key);
+      if (!pageMatch) continue;
+      const page = JSON.parse(override.value);
+      const pageIndex = pages.findIndex(item => item.p === page.p);
+      if (pageIndex < 0) pages.push(page);
+      else pages[pageIndex] = page;
+    }
+    const availablePages = new Set(pages.map(page => page.p));
+    toc = toc.filter(item => availablePages.has(item.p));
+
+    return jsonResponse({ book: { pages, toc } });
+  }
+
+  const [defaultTexts, defaultLabels, overrides] = await Promise.all([
+    readAssetJson(env, request, "/content/texts.json"),
+    readAssetJson(env, request, "/content/labels.json"),
+    env.DB.prepare(
+      "SELECT category, content_key, value, is_deleted FROM site_content WHERE category IN ('texts', 'labels')",
+    ).all(),
+  ]);
+  const texts = { ...defaultTexts };
+  const labels = { ...defaultLabels };
+  for (const item of overrides.results) {
+    const target = item.category === "texts" ? texts : labels;
+    if (item.is_deleted) delete target[item.content_key];
+    else target[item.content_key] = item.value;
+  }
+
+  return jsonResponse({ texts, labels });
+}
+
+async function handleAdminContent(request, env) {
+  if (request.method === "POST") {
+    const body = await readJson(request);
+    if (!body) return errorResponse("Ожидается JSON-объект.");
+
+    const category = typeof body.category === "string" ? body.category : "";
+    const key = typeof body.key === "string" ? body.key.trim() : "";
+    const value = typeof body.value === "string" ? body.value : null;
+    if (!["texts", "labels", "book"].includes(category) ||
+        !key || key.length > 200 || value === null || value.length > 900000) {
+      return errorResponse("Некорректная запись контента.");
+    }
+    if (category === "book") {
+      if (key === "toc") {
+        let toc;
+        try {
+          toc = JSON.parse(value);
+        } catch {
+          return errorResponse("Оглавление должно быть корректным JSON.");
+        }
+        if (!Array.isArray(toc) || toc.length > 1000 ||
+            toc.some(item => !item || !Number.isInteger(item.p) ||
+              typeof item.t !== "string" || item.t.length > 500)) {
+          return errorResponse("Некорректное оглавление книги.");
+        }
+      } else {
+        const pageMatch = /^page:(\d{1,4})$/.exec(key);
+        if (!pageMatch) return errorResponse("Некорректный ключ страницы книги.");
+        let page;
+        try {
+          page = JSON.parse(value);
+        } catch {
+          return errorResponse("Страница книги должна быть корректным JSON.");
+        }
+        if (!page || page.p !== Number(pageMatch[1]) ||
+            typeof page.t !== "string" || page.t.length > 500 ||
+            typeof page.h !== "string") {
+          return errorResponse("Некорректная страница книги.");
+        }
+      }
+    }
+
+    const updatedAt = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(
+      `INSERT INTO site_content (category, content_key, value, updated_at, is_deleted)
+       VALUES (?, ?, ?, ?, 0)
+       ON CONFLICT(category, content_key) DO UPDATE SET
+         value = excluded.value, updated_at = excluded.updated_at, is_deleted = 0`,
+    ).bind(category, key, value, updatedAt).run();
+    return jsonResponse({ status: "ok", category, key, updated_at: updatedAt });
+  }
+
+  if (request.method === "DELETE") {
+    const url = new URL(request.url);
+    const category = url.searchParams.get("category") || "";
+    const key = url.searchParams.get("key") || "";
+    if (!["texts", "labels", "book"].includes(category) || !key || key.length > 200) {
+      return errorResponse("Укажите категорию и ключ записи.");
+    }
+    await env.DB.prepare(
+      `INSERT INTO site_content (category, content_key, value, updated_at, is_deleted)
+       VALUES (?, ?, '', ?, 1)
+       ON CONFLICT(category, content_key) DO UPDATE SET
+         value = '', updated_at = excluded.updated_at, is_deleted = 1`,
+    ).bind(category, key, Math.floor(Date.now() / 1000)).run();
+    return jsonResponse({ status: "ok", category, key });
+  }
+
+  return errorResponse("Метод не поддерживается.", 405);
+}
+
+function decodeImageDataUrl(dataUrl) {
+  const match = /^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
+  if (!match) return null;
+  let binary;
+  try {
+    binary = atob(match[2]);
+  } catch {
+    return null;
+  }
+  if (binary.length === 0 || binary.length > 262144) return null;
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return { mimeType: match[1], bytes };
+}
+
+async function handleImages(request, env) {
+  if (request.method !== "GET") {
+    return errorResponse("Метод не поддерживается.", 405);
+  }
+
+  const url = new URL(request.url);
+  const name = url.searchParams.get("name");
+  if (name) {
+    const image = await env.DB.prepare(
+      "SELECT mime_type, file_data FROM site_images WHERE name = ?",
+    ).bind(name).first();
+    if (!image) return errorResponse("Изображение не найдено.", 404);
+    return new Response(image.file_data, {
+      headers: {
+        "content-type": image.mime_type,
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  }
+
+  const [manifest, uploaded] = await Promise.all([
+    readAssetJson(env, request, "/images/manifest.json"),
+    env.DB.prepare(
+      "SELECT id, name, mime_type, size_bytes, created_at FROM site_images ORDER BY name",
+    ).all(),
+  ]);
+  return jsonResponse({
+    items: [
+      ...(Array.isArray(manifest) ? manifest : []),
+      ...uploaded.results.map(item => ({
+        id: item.id,
+        name: item.name,
+        path: `/api/images?name=${encodeURIComponent(item.name)}`,
+        source: "uploaded",
+        mimeType: item.mime_type,
+        sizeBytes: item.size_bytes,
+        deletable: true,
+        createdAt: item.created_at,
+      })),
+    ],
+  });
+}
+
+async function handleAdminImages(request, env) {
+  if (request.method === "POST") {
+    const body = await readJson(request);
+    if (!body) return errorResponse("Ожидается JSON-объект.");
+
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const dataUrl = typeof body.data_url === "string" ? body.data_url : "";
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(name)) {
+      return errorResponse("Имя файла содержит недопустимые символы.");
+    }
+    const image = decodeImageDataUrl(dataUrl);
+    if (!image) {
+      return errorResponse("Изображение должно быть JPG, PNG, WebP, GIF или AVIF и не превышать 256 КБ.", 413);
+    }
+
+    const id = crypto.randomUUID();
+    const createdAt = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(
+      `INSERT INTO site_images (id, name, mime_type, file_data, size_bytes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(name) DO UPDATE SET
+         id = excluded.id, mime_type = excluded.mime_type,
+         file_data = excluded.file_data, size_bytes = excluded.size_bytes,
+         created_at = excluded.created_at`,
+    ).bind(id, name, image.mimeType, image.bytes, image.bytes.byteLength, createdAt).run();
+    return jsonResponse({
+      item: {
+        id,
+        name,
+        path: `/api/images?name=${encodeURIComponent(name)}`,
+        source: "uploaded",
+        mimeType: image.mimeType,
+        sizeBytes: image.bytes.byteLength,
+        deletable: true,
+        createdAt,
+      },
+    }, 201);
+  }
+
+  if (request.method === "DELETE") {
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id") || "";
+    if (!id || id.length > 100) return errorResponse("Укажите id загруженного изображения.");
+    const result = await env.DB.prepare("DELETE FROM site_images WHERE id = ?").bind(id).run();
+    if (!result.meta.changes) return errorResponse("Загруженное изображение не найдено.", 404);
+    return jsonResponse({ status: "ok", id });
+  }
+
+  return errorResponse("Метод не поддерживается.", 405);
+}
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
@@ -484,6 +743,10 @@ export default {
       if (pathname === "/api/yaga-chat") return await handleYagaChat(request, env);
       if (pathname === "/api/media") return await handleMedia(request, env);
       if (pathname === "/api/coins") return await handleCoins(request, env);
+      if (pathname === "/api/content") return await handleContent(request, env);
+      if (pathname === "/api/admin/content") return await handleAdminContent(request, env);
+      if (pathname === "/api/images") return await handleImages(request, env);
+      if (pathname === "/api/admin/images") return await handleAdminImages(request, env);
       return env.ASSETS.fetch(request);
     } catch (error) {
       console.error("Worker request failed:", error);

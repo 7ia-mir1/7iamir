@@ -120,6 +120,65 @@
         }
         .admin-panel.active { display: block; }
 
+        .content-editor-grid {
+            display: grid;
+            grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.6fr);
+            gap: 14px;
+        }
+        .content-list {
+            width: 100%;
+            min-height: 260px;
+            padding: 8px;
+            border: 1.5px solid #8b5a2b;
+            border-radius: 8px;
+            background: #fffdf7;
+            color: #2b1708;
+            font: 14px Georgia, serif;
+        }
+        .content-field {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #8b5a2b;
+            border-radius: 7px;
+            background: #fffdf7;
+            color: #2b1708;
+            font: 14px Georgia, serif;
+        }
+        .content-textarea {
+            min-height: 240px;
+            resize: vertical;
+            line-height: 1.45;
+        }
+        .content-status {
+            min-height: 22px;
+            margin: 8px 0;
+            color: #5a3818;
+            font-size: 13px;
+        }
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 12px;
+        }
+        .image-card {
+            min-width: 0;
+            background: #fffdf7;
+            border: 1.5px solid #8b5a2b;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .image-preview {
+            width: 100%;
+            height: 130px;
+            object-fit: contain;
+            background: #2b1708;
+            border: 1px solid #d4af37;
+            border-radius: 6px;
+        }
+        @media (max-width: 700px) {
+            .content-editor-grid { grid-template-columns: 1fr; }
+        }
+
         .item-card {
             background: #fffdf7;
             border: 2px solid #8b5a2b;
@@ -213,6 +272,15 @@
             <button class="tab-btn" id="admTabTreasury" onclick="switchAdminTab('treasury')">
                 ⚙ Управление казной и Тесты
             </button>
+            <button class="tab-btn" id="admTabTexts" onclick="switchAdminTab('texts')">
+                📝 Тексты
+            </button>
+            <button class="tab-btn" id="admTabLabels" onclick="switchAdminTab('labels')">
+                🔤 Названия и подсказки
+            </button>
+            <button class="tab-btn" id="admTabImages" onclick="switchAdminTab('images')">
+                🖼 Изображения
+            </button>
         </div>
 
         <!-- ВКЛАДКА 0: МЕДИАТЕКА И ЗАГРУЗКА ФАЙЛОВ -->
@@ -267,6 +335,84 @@
             </div>
         </div>
 
+        <div class="admin-panel" id="panelTexts">
+            <h2 style="margin-top:0; color:#5a1807;">📝 Тексты сайта и книги</h2>
+            <p style="margin-top:0; color:#5a3818;">
+                Редактируйте тексты интерфейса и страницы волшебной книги. Если API недоступно, изменения сохраняются в этом браузере.
+            </p>
+            <div class="content-editor-grid">
+                <div>
+                    <select class="content-field" id="contentTextKeyList" size="12" aria-label="Список текстов"></select>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <input class="content-field" id="newTextKey" type="text" placeholder="Ключ нового текста">
+                        <button class="action-btn gold" type="button" onclick="beginNewContentEntry('texts')">+ Новый</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="contentTextValue" style="display:block; font-weight:bold; margin-bottom:5px;">Содержимое</label>
+                    <textarea class="content-field content-textarea" id="contentTextValue"></textarea>
+                    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                        <button class="action-btn" type="button" onclick="saveSelectedContent('texts')">💾 Сохранить текст</button>
+                        <button class="action-btn danger" type="button" onclick="deleteSelectedContent('texts')">🗑 Удалить текст</button>
+                    </div>
+                </div>
+            </div>
+            <div class="content-status" id="textContentStatus" role="status"></div>
+            <details class="item-card">
+                <summary style="cursor:pointer; font-weight:bold; color:#5a1807;">📖 Редактирование страниц волшебной книги</summary>
+                <div style="display:grid; grid-template-columns:minmax(180px, 0.4fr) minmax(0, 1fr); gap:12px; margin-top:12px;">
+                    <select class="content-field" id="bookPageList" size="10" aria-label="Страницы книги"></select>
+                    <div>
+                        <input class="content-field" id="bookPageTitle" type="text" placeholder="Название страницы">
+                        <textarea class="content-field content-textarea" id="bookPageHtml" style="margin-top:8px; min-height:320px;" placeholder="HTML содержимого страницы"></textarea>
+                        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            <button class="action-btn" type="button" onclick="saveBookPage()">💾 Сохранить страницу</button>
+                            <button class="action-btn danger" type="button" onclick="deleteBookPage()">🗑 Удалить страницу</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-status" id="bookContentStatus" role="status"></div>
+            </details>
+        </div>
+
+        <div class="admin-panel" id="panelLabels">
+            <h2 style="margin-top:0; color:#5a1807;">🔤 Названия, подписи и подсказки</h2>
+            <p style="margin-top:0; color:#5a3818;">Ключ — исходная надпись или подсказка; значение справа применяется на сайте.</p>
+            <div class="content-editor-grid">
+                <div>
+                    <select class="content-list" id="contentLabelKeyList" size="12" aria-label="Список названий и подсказок"></select>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <input class="content-field" id="newLabelKey" type="text" placeholder="Исходная надпись">
+                        <button class="action-btn gold" type="button" onclick="beginNewContentEntry('labels')">+ Добавить</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="contentLabelValue" style="display:block; font-weight:bold; margin-bottom:5px;">Новое название / подсказка</label>
+                    <textarea class="content-field content-textarea" id="contentLabelValue" style="min-height:180px;"></textarea>
+                    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                        <button class="action-btn" type="button" onclick="saveSelectedContent('labels')">💾 Сохранить</button>
+                        <button class="action-btn danger" type="button" onclick="deleteSelectedContent('labels')">🗑 Удалить название / подсказку</button>
+                    </div>
+                </div>
+            </div>
+            <div class="content-status" id="labelContentStatus" role="status"></div>
+        </div>
+
+        <div class="admin-panel" id="panelImages">
+            <h2 style="margin-top:0; color:#5a1807;">🖼 Изображения проекта</h2>
+            <p style="margin-top:0; color:#5a3818;">
+                Статические файлы показаны только для просмотра: их замену и удаление нужно публиковать вместе с проектом.
+                Новые изображения и переопределения сохраняются в D1 (лимит 256 КБ на файл) или локально в браузере.
+            </p>
+            <div class="item-card" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <input class="content-field" id="newImageName" type="text" placeholder="Имя файла, например logo.webp" style="max-width:320px;">
+                <input id="newImageFile" type="file" accept="image/*">
+                <button class="action-btn" type="button" onclick="uploadNewImage()">📥 Загрузить изображение</button>
+            </div>
+            <div class="content-status" id="imageContentStatus" role="status"></div>
+            <div class="image-gallery" id="imageGallery"></div>
+        </div>
+
         <div class="top-row" style="margin-top: 20px; margin-bottom: 0; border-bottom: none; border-top: 2px dashed rgba(110, 65, 25, 0.45); padding-top: 14px; justify-content: flex-end;">
             <button class="close-btn" onclick="closeAdmin()">ЗАКРЫТЬ</button>
         </div>
@@ -274,6 +420,8 @@
 
     <script src="wallet.js"></script>
     <script src="media.js"></script>
+    <script src="content/loader.js"></script>
+    <script src="admin-content.js"></script>
     <script>
         const PROFILE_KEY = 'GORNITSA_DETECTIVE_PROFILE_V1';
         const MATCHES_KEY = 'GORNITSA_ADMIN_MATCHES_V1';
@@ -286,15 +434,11 @@
         };
 
         function switchAdminTab(tab) {
-            document.getElementById('admTabMedia').classList.toggle('active', tab === 'media');
-            document.getElementById('admTabIdeas').classList.toggle('active', tab === 'ideas');
-            document.getElementById('admTabPairs').classList.toggle('active', tab === 'pairs');
-            document.getElementById('admTabTreasury').classList.toggle('active', tab === 'treasury');
-
-            document.getElementById('panelMedia').classList.toggle('active', tab === 'media');
-            document.getElementById('panelIdeas').classList.toggle('active', tab === 'ideas');
-            document.getElementById('panelPairs').classList.toggle('active', tab === 'pairs');
-            document.getElementById('panelTreasury').classList.toggle('active', tab === 'treasury');
+            ['Media', 'Ideas', 'Pairs', 'Treasury', 'Texts', 'Labels', 'Images'].forEach(name => {
+                const key = name.toLowerCase();
+                document.getElementById(`admTab${name}`).classList.toggle('active', tab === key);
+                document.getElementById(`panel${name}`).classList.toggle('active', tab === key);
+            });
         }
 
         function toggleAdminMediaAccordion(cat) {

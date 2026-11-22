@@ -1,0 +1,1115 @@
+﻿[
+    {
+        "name":  "bank.jpeg",
+        "path":  "images/bank.jpeg",
+        "source":  "project",
+        "sizeBytes":  2776551,
+        "deletable":  false
+    },
+    {
+        "name":  "chat-general.jpeg",
+        "path":  "images/chat-general.jpeg",
+        "source":  "project",
+        "sizeBytes":  2453859,
+        "deletable":  false
+    },
+    {
+        "name":  "chat-general-2.jpeg",
+        "path":  "images/chat-general-2.jpeg",
+        "source":  "project",
+        "sizeBytes":  2453859,
+        "deletable":  false
+    },
+    {
+        "name":  "chitalnya.jpeg",
+        "path":  "images/chitalnya.jpeg",
+        "source":  "project",
+        "sizeBytes":  3257986,
+        "deletable":  false
+    },
+    {
+        "name":  "detektiv.jpeg",
+        "path":  "images/detektiv.jpeg",
+        "source":  "project",
+        "sizeBytes":  2959529,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_les_man.jpeg",
+        "path":  "images/doroga_les_man.jpeg",
+        "source":  "project",
+        "sizeBytes":  3898641,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_les_obra_man.jpeg",
+        "path":  "images/doroga_les_obra_man.jpeg",
+        "source":  "project",
+        "sizeBytes":  3921494,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_les_obra_woman.jpeg",
+        "path":  "images/doroga_les_obra_woman.jpeg",
+        "source":  "project",
+        "sizeBytes":  3917876,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_les_woman.jpeg",
+        "path":  "images/doroga_les_woman.jpeg",
+        "source":  "project",
+        "sizeBytes":  3983986,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_zveri_man.jpeg",
+        "path":  "images/doroga_zveri_man.jpeg",
+        "source":  "project",
+        "sizeBytes":  3987918,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_zveri_obra_man.jpeg",
+        "path":  "images/doroga_zveri_obra_man.jpeg",
+        "source":  "project",
+        "sizeBytes":  4032225,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_zveri_obra_woman.jpeg",
+        "path":  "images/doroga_zveri_obra_woman.jpeg",
+        "source":  "project",
+        "sizeBytes":  4033922,
+        "deletable":  false
+    },
+    {
+        "name":  "doroga_zveri_woman.jpeg",
+        "path":  "images/doroga_zveri_woman.jpeg",
+        "source":  "project",
+        "sizeBytes":  4056356,
+        "deletable":  false
+    },
+    {
+        "name":  "dvor.jpeg",
+        "path":  "images/dvor.jpeg",
+        "source":  "project",
+        "sizeBytes":  3468612,
+        "deletable":  false
+    },
+    {
+        "name":  "header_group.jpg",
+        "path":  "images/header_group.jpg",
+        "source":  "project",
+        "sizeBytes":  77759,
+        "deletable":  false
+    },
+    {
+        "name":  "izba_man.jpeg",
+        "path":  "images/izba_man.jpeg",
+        "source":  "project",
+        "sizeBytes":  2688755,
+        "deletable":  false
+    },
+    {
+        "name":  "izba_woman.jpeg",
+        "path":  "images/izba_woman.jpeg",
+        "source":  "project",
+        "sizeBytes":  2858395,
+        "deletable":  false
+    },
+    {
+        "name":  "kino.jpeg",
+        "path":  "images/kino.jpeg",
+        "source":  "project",
+        "sizeBytes":  3109327,
+        "deletable":  false
+    },
+    {
+        "name":  "magazin.jpeg",
+        "path":  "images/magazin.jpeg",
+        "source":  "project",
+        "sizeBytes":  3162186,
+        "deletable":  false
+    },
+    {
+        "name":  "ozero.jpeg",
+        "path":  "images/ozero.jpeg",
+        "source":  "project",
+        "sizeBytes":  1363657,
+        "deletable":  false
+    },
+    {
+        "name":  "ploshad.jpeg",
+        "path":  "images/ploshad.jpeg",
+        "source":  "project",
+        "sizeBytes":  3438400,
+        "deletable":  false
+    },
+    {
+        "name":  "trud.jpeg",
+        "path":  "images/trud.jpeg",
+        "source":  "project",
+        "sizeBytes":  2831613,
+        "deletable":  false
+    },
+    {
+        "name":  "yaga.jpeg",
+        "path":  "images/yaga.jpeg",
+        "source":  "project",
+        "sizeBytes":  3212667,
+        "deletable":  false
+    },
+    {
+        "name":  "yaga_portrait.jpg",
+        "path":  "images/yaga_portrait.jpg",
+        "source":  "project",
+        "sizeBytes":  2708133,
+        "deletable":  false
+    },
+    {
+        "name":  "yaga_telega.jpeg",
+        "path":  "images/yaga_telega.jpeg",
+        "source":  "project",
+        "sizeBytes":  3832444,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-000.jpeg",
+        "path":  "images/embedded-index-000.jpeg",
+        "source":  "embedded:index.html",
+        "sizeBytes":  212849,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-001.webp",
+        "path":  "images/embedded-index-001.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  5718,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-002.webp",
+        "path":  "images/embedded-index-002.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  5060,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-003.webp",
+        "path":  "images/embedded-index-003.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2334,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-004.webp",
+        "path":  "images/embedded-index-004.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  1902,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-005.webp",
+        "path":  "images/embedded-index-005.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  3920,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-006.webp",
+        "path":  "images/embedded-index-006.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  9060,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-007.webp",
+        "path":  "images/embedded-index-007.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  3864,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-008.webp",
+        "path":  "images/embedded-index-008.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  14680,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-009.webp",
+        "path":  "images/embedded-index-009.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8864,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-010.webp",
+        "path":  "images/embedded-index-010.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  9032,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-011.webp",
+        "path":  "images/embedded-index-011.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  7504,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-012.webp",
+        "path":  "images/embedded-index-012.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  16752,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-013.webp",
+        "path":  "images/embedded-index-013.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  11340,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-014.webp",
+        "path":  "images/embedded-index-014.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8438,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-015.webp",
+        "path":  "images/embedded-index-015.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8944,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-016.webp",
+        "path":  "images/embedded-index-016.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  12478,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-017.webp",
+        "path":  "images/embedded-index-017.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  15498,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-018.webp",
+        "path":  "images/embedded-index-018.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  9538,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-019.webp",
+        "path":  "images/embedded-index-019.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  16992,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-020.webp",
+        "path":  "images/embedded-index-020.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8164,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-021.webp",
+        "path":  "images/embedded-index-021.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  6838,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-022.webp",
+        "path":  "images/embedded-index-022.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  7346,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-023.webp",
+        "path":  "images/embedded-index-023.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8606,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-024.webp",
+        "path":  "images/embedded-index-024.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  4706,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-025.webp",
+        "path":  "images/embedded-index-025.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  4998,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-026.webp",
+        "path":  "images/embedded-index-026.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  6656,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-027.webp",
+        "path":  "images/embedded-index-027.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  17534,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-028.webp",
+        "path":  "images/embedded-index-028.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  5858,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-029.webp",
+        "path":  "images/embedded-index-029.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  5022,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-030.webp",
+        "path":  "images/embedded-index-030.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  22746,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-031.webp",
+        "path":  "images/embedded-index-031.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  19726,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-032.webp",
+        "path":  "images/embedded-index-032.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  4028,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-033.webp",
+        "path":  "images/embedded-index-033.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8588,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-034.webp",
+        "path":  "images/embedded-index-034.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  14344,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-035.webp",
+        "path":  "images/embedded-index-035.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  6148,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-036.webp",
+        "path":  "images/embedded-index-036.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  9524,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-037.webp",
+        "path":  "images/embedded-index-037.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  6886,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-038.webp",
+        "path":  "images/embedded-index-038.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  1506,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-039.webp",
+        "path":  "images/embedded-index-039.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8456,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-040.webp",
+        "path":  "images/embedded-index-040.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  3886,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-041.webp",
+        "path":  "images/embedded-index-041.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  10086,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-042.webp",
+        "path":  "images/embedded-index-042.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2924,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-043.webp",
+        "path":  "images/embedded-index-043.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  4034,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-044.webp",
+        "path":  "images/embedded-index-044.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  5548,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-045.webp",
+        "path":  "images/embedded-index-045.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2454,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-046.webp",
+        "path":  "images/embedded-index-046.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  8008,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-047.webp",
+        "path":  "images/embedded-index-047.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  3752,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-048.webp",
+        "path":  "images/embedded-index-048.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  17842,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-049.webp",
+        "path":  "images/embedded-index-049.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  41814,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-050.webp",
+        "path":  "images/embedded-index-050.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40182,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-051.webp",
+        "path":  "images/embedded-index-051.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  39330,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-052.webp",
+        "path":  "images/embedded-index-052.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  36274,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-053.webp",
+        "path":  "images/embedded-index-053.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  35578,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-054.webp",
+        "path":  "images/embedded-index-054.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  35506,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-055.webp",
+        "path":  "images/embedded-index-055.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40002,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-056.webp",
+        "path":  "images/embedded-index-056.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37180,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-057.webp",
+        "path":  "images/embedded-index-057.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  38186,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-058.webp",
+        "path":  "images/embedded-index-058.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  41292,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-059.webp",
+        "path":  "images/embedded-index-059.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  42268,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-060.webp",
+        "path":  "images/embedded-index-060.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  43156,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-061.webp",
+        "path":  "images/embedded-index-061.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  35306,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-062.webp",
+        "path":  "images/embedded-index-062.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  36182,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-063.webp",
+        "path":  "images/embedded-index-063.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  34614,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-064.webp",
+        "path":  "images/embedded-index-064.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37108,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-065.webp",
+        "path":  "images/embedded-index-065.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  35386,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-066.webp",
+        "path":  "images/embedded-index-066.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37972,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-067.webp",
+        "path":  "images/embedded-index-067.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  36848,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-068.webp",
+        "path":  "images/embedded-index-068.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  39690,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-069.webp",
+        "path":  "images/embedded-index-069.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40646,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-070.webp",
+        "path":  "images/embedded-index-070.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  39090,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-071.webp",
+        "path":  "images/embedded-index-071.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37918,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-072.webp",
+        "path":  "images/embedded-index-072.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40198,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-073.webp",
+        "path":  "images/embedded-index-073.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  47906,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-074.webp",
+        "path":  "images/embedded-index-074.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  47014,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-075.webp",
+        "path":  "images/embedded-index-075.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  44686,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-076.webp",
+        "path":  "images/embedded-index-076.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  10156,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-077.webp",
+        "path":  "images/embedded-index-077.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37852,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-078.webp",
+        "path":  "images/embedded-index-078.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  39740,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-079.webp",
+        "path":  "images/embedded-index-079.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40062,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-080.webp",
+        "path":  "images/embedded-index-080.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40478,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-081.webp",
+        "path":  "images/embedded-index-081.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  38608,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-082.webp",
+        "path":  "images/embedded-index-082.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37002,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-083.webp",
+        "path":  "images/embedded-index-083.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37636,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-084.webp",
+        "path":  "images/embedded-index-084.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37080,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-085.webp",
+        "path":  "images/embedded-index-085.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  37492,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-086.webp",
+        "path":  "images/embedded-index-086.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  36542,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-087.webp",
+        "path":  "images/embedded-index-087.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  35074,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-088.webp",
+        "path":  "images/embedded-index-088.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40812,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-089.webp",
+        "path":  "images/embedded-index-089.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  38992,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-090.webp",
+        "path":  "images/embedded-index-090.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  31212,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-091.webp",
+        "path":  "images/embedded-index-091.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  33524,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-092.webp",
+        "path":  "images/embedded-index-092.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  35904,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-093.webp",
+        "path":  "images/embedded-index-093.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  36754,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-094.webp",
+        "path":  "images/embedded-index-094.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  39278,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-095.webp",
+        "path":  "images/embedded-index-095.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  41488,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-096.webp",
+        "path":  "images/embedded-index-096.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  40926,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-097.webp",
+        "path":  "images/embedded-index-097.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  42392,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-098.webp",
+        "path":  "images/embedded-index-098.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  44530,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-099.webp",
+        "path":  "images/embedded-index-099.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  43548,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-100.webp",
+        "path":  "images/embedded-index-100.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  44106,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-101.webp",
+        "path":  "images/embedded-index-101.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  44012,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-102.webp",
+        "path":  "images/embedded-index-102.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  44800,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-103.webp",
+        "path":  "images/embedded-index-103.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  41502,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-104.webp",
+        "path":  "images/embedded-index-104.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  6760,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-105.webp",
+        "path":  "images/embedded-index-105.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  9332,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-106.webp",
+        "path":  "images/embedded-index-106.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2972,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-107.webp",
+        "path":  "images/embedded-index-107.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2536,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-108.webp",
+        "path":  "images/embedded-index-108.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  4320,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-109.webp",
+        "path":  "images/embedded-index-109.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  1862,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-110.webp",
+        "path":  "images/embedded-index-110.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  4666,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-111.webp",
+        "path":  "images/embedded-index-111.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2858,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-112.webp",
+        "path":  "images/embedded-index-112.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2428,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-113.webp",
+        "path":  "images/embedded-index-113.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  3596,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-114.webp",
+        "path":  "images/embedded-index-114.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  3208,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-115.webp",
+        "path":  "images/embedded-index-115.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2668,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-116.webp",
+        "path":  "images/embedded-index-116.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2024,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-index-117.webp",
+        "path":  "images/embedded-index-117.webp",
+        "source":  "embedded:index.html",
+        "sizeBytes":  2684,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-ozero_info-000.jpeg",
+        "path":  "images/embedded-ozero_info-000.jpeg",
+        "source":  "embedded:ozero_info.html",
+        "sizeBytes":  212849,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-ozero_info-001.png",
+        "path":  "images/embedded-ozero_info-001.png",
+        "source":  "embedded:ozero_info.html",
+        "sizeBytes":  33859,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-ozero_info-002.png",
+        "path":  "images/embedded-ozero_info-002.png",
+        "source":  "embedded:ozero_info.html",
+        "sizeBytes":  38461,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-ozero_info-003.png",
+        "path":  "images/embedded-ozero_info-003.png",
+        "source":  "embedded:ozero_info.html",
+        "sizeBytes":  38162,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-000.jpeg",
+        "path":  "images/embedded-yaga_chat-000.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  32593,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-001.jpeg",
+        "path":  "images/embedded-yaga_chat-001.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  120071,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-002.jpeg",
+        "path":  "images/embedded-yaga_chat-002.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  146409,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-003.jpeg",
+        "path":  "images/embedded-yaga_chat-003.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  212849,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-004.jpeg",
+        "path":  "images/embedded-yaga_chat-004.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  171023,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-005.jpeg",
+        "path":  "images/embedded-yaga_chat-005.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  120071,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-006.jpeg",
+        "path":  "images/embedded-yaga_chat-006.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  146409,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-007.jpeg",
+        "path":  "images/embedded-yaga_chat-007.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  153816,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-008.jpeg",
+        "path":  "images/embedded-yaga_chat-008.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  140043,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-009.jpeg",
+        "path":  "images/embedded-yaga_chat-009.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  147536,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-010.jpeg",
+        "path":  "images/embedded-yaga_chat-010.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  212849,
+        "deletable":  false
+    },
+    {
+        "name":  "embedded-yaga_chat-011.jpeg",
+        "path":  "images/embedded-yaga_chat-011.jpeg",
+        "source":  "embedded:yaga_chat.html",
+        "sizeBytes":  171023,
+        "deletable":  false
+    }
+]
