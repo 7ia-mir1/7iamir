@@ -1164,13 +1164,14 @@ export default {
       }
 
       const adminOnly =
+        pathname === "/api/admin" ||
         pathname.startsWith("/api/admin/") ||
         (pathname === "/api/media" && request.method !== "GET") ||
         (pathname === "/api/coins" && request.method !== "GET") ||
         pathname === "/admin.html";
       if (adminOnly && session.role !== "admin") {
         if (pathname === "/admin.html") {
-          return Response.redirect(new URL("/index.html?denied=admin", request.url), 302);
+          return Response.redirect(new URL("/index.html", request.url), 302);
         }
         return errorResponse("Требуются права администратора.", 403);
       }

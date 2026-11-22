@@ -1,6 +1,7 @@
 (function () {
   const USER_ID_KEY = "GORNITSA_USER_ID";
   const isIndexPage = location.pathname === "/" || location.pathname.endsWith("/index.html");
+  const isAdminPage = location.pathname.endsWith("/admin.html");
   const loginUrl = `/login.html?next=${encodeURIComponent(location.pathname + location.search)}`;
   if (isIndexPage) {
     const navigation = document.getElementById("topNavBar");
@@ -108,9 +109,15 @@
     if (!user || typeof user.id !== "string") {
       throw new Error("Сервер вернул некорректные данные пользователя.");
     }
+    if (isAdminPage && user.role !== "admin") {
+      location.replace("/index.html");
+      return null;
+    }
+
     localStorage.setItem(USER_ID_KEY, user.id);
     sessionStorage.setItem("7ia_my_id", user.id);
 
+    if (isAdminPage) document.body.style.visibility = "";
     if (isIndexPage) {
       const isAdmin = user.role === "admin";
       if (!isAdmin) {

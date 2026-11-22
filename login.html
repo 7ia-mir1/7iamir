@@ -99,30 +99,13 @@
         const recoveryPanel = document.getElementById("recoveryPanel");
         const recoveryEmail = document.getElementById("recoveryEmail");
         const resetPasswordForm = document.getElementById("resetPasswordForm");
-        const query = new URLSearchParams(location.search);
-
         function setMessage(message, isError) {
             messageElement.textContent = message;
             messageElement.style.color = isError ? "#ffb6a8" : "#ffe599";
         }
 
-        function safeDestination(role) {
-            const candidate = query.get("next") || "/index.html";
-            let destination;
-            try {
-                destination = new URL(candidate, location.origin);
-            } catch {
-                return "/index.html";
-            }
-            if (destination.origin !== location.origin ||
-                !destination.pathname.startsWith("/") ||
-                destination.pathname === "/login.html") {
-                return "/index.html";
-            }
-            if (role !== "admin" && destination.pathname === "/admin.html") {
-                return "/index.html";
-            }
-            return `${destination.pathname}${destination.search}${destination.hash}`;
+        function destinationForRole(role) {
+            return role === "admin" ? "/admin.html" : "/index.html";
         }
 
         async function authRequest(path, body) {
@@ -150,7 +133,7 @@
                 sessionStorage.setItem("7ia_my_id", result.user.id);
                 localStorage.removeItem("GORNITSA_ADMIN_MODE");
                 sessionStorage.removeItem("GORNITSA_ADMIN_MODE");
-                location.replace(safeDestination(result.user.role));
+                location.replace(destinationForRole(result.user.role));
             } catch (error) {
                 setMessage(error.message, true);
                 button.disabled = false;
@@ -206,7 +189,7 @@
         fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" })
             .then(response => response.ok ? response.json() : null)
             .then(result => {
-                if (result && result.user) location.replace(safeDestination(result.user.role));
+                if (result && result.user) location.replace(destinationForRole(result.user.role));
             })
             .catch(error => console.warn("Не удалось проверить сохранённую сессию.", error));
     </script>
