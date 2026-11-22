@@ -75,9 +75,9 @@ CREATE TABLE IF NOT EXISTS auth_login_attempts (
 );
 
 INSERT OR IGNORE INTO users (id, email, password_hash, role, coins, updated_at) VALUES
-    ('1001', 'olvet9999@gmail.com', 'pbkdf2_sha256$210000$LaxjowQ1KGPlDPyaj+CWqg==$W+Cycg07fYGVqITc+CMvC+L3t5Ky3MGBJXoRgbiYtGI=', 'user', 800, CAST(strftime('%s', 'now') AS INTEGER)),
-    ('1002', 'king.kingparadise@gmail.com', 'pbkdf2_sha256$210000$yWZZ9zAkeSFDF37oTka0oA==$smd2LZ7lIpdwV3UhuJY/RK9xPt2GqdCzYIm0qA5g1+w=', 'user', 800, CAST(strftime('%s', 'now') AS INTEGER)),
-    ('1003', 'tataole@gmail.com', 'pbkdf2_sha256$210000$6SMep+FpV+hb/Jl1LPxUtg==$elbu/zMBuKXGnU0+Ww25kag+lZVLpZls4vIKOPT3lj0=', 'admin', 800, CAST(strftime('%s', 'now') AS INTEGER));
+    ('1001', 'olvet9999@gmail.com', 'pbkdf2_sha256$100000$zRjwQS3vq05jzyIfk0gQJw==$kmHOWT1Pm7qfNAU2m1raCBlmL4MbJBrSl2nCIMZr7dw=', 'user', 800, CAST(strftime('%s', 'now') AS INTEGER)),
+    ('1002', 'king.kingparadise@gmail.com', 'pbkdf2_sha256$100000$lMq+8TCbTDP2f0hRpmKkCA==$QjpZBl9bIEBR38YGiERIUkd/eL4dySZ8I9TzuTk38ds=', 'user', 800, CAST(strftime('%s', 'now') AS INTEGER)),
+    ('1003', 'tataole@gmail.com', 'pbkdf2_sha256$100000$urD7Up6YG8XI5ZIj91sO2g==$eHN5QJyxqYuIksqpcoXDjRVNWI8CyEcsgeLc/JB1BmU=', 'admin', 800, CAST(strftime('%s', 'now') AS INTEGER));
 
 CREATE TABLE IF NOT EXISTS site_content (
     category TEXT NOT NULL CHECK (category IN ('texts', 'labels', 'book')),

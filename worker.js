@@ -33,7 +33,7 @@ function boundedLimit(value, fallback = 50) {
 
 const SESSION_COOKIE_NAME = "gornitsa_session";
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const PASSWORD_HASH_ITERATIONS = 210000;
+const PASSWORD_HASH_ITERATIONS = 100000;
 const RESET_CODE_TTL_SECONDS = 10 * 60;
 const RESET_CODE_COOLDOWN_SECONDS = 60;
 const SEEDED_ACCOUNTS = [
@@ -41,19 +41,19 @@ const SEEDED_ACCOUNTS = [
     id: "1001",
     email: "olvet9999@gmail.com",
     role: "user",
-    passwordHash: "pbkdf2_sha256$210000$LaxjowQ1KGPlDPyaj+CWqg==$W+Cycg07fYGVqITc+CMvC+L3t5Ky3MGBJXoRgbiYtGI=",
+    passwordHash: "pbkdf2_sha256$100000$zRjwQS3vq05jzyIfk0gQJw==$kmHOWT1Pm7qfNAU2m1raCBlmL4MbJBrSl2nCIMZr7dw=",
   },
   {
     id: "1002",
     email: "king.kingparadise@gmail.com",
     role: "user",
-    passwordHash: "pbkdf2_sha256$210000$yWZZ9zAkeSFDF37oTka0oA==$smd2LZ7lIpdwV3UhuJY/RK9xPt2GqdCzYIm0qA5g1+w=",
+    passwordHash: "pbkdf2_sha256$100000$lMq+8TCbTDP2f0hRpmKkCA==$QjpZBl9bIEBR38YGiERIUkd/eL4dySZ8I9TzuTk38ds=",
   },
   {
     id: "1003",
     email: "tataole@gmail.com",
     role: "admin",
-    passwordHash: "pbkdf2_sha256$210000$6SMep+FpV+hb/Jl1LPxUtg==$elbu/zMBuKXGnU0+Ww25kag+lZVLpZls4vIKOPT3lj0=",
+    passwordHash: "pbkdf2_sha256$100000$urD7Up6YG8XI5ZIj91sO2g==$eHN5QJyxqYuIksqpcoXDjRVNWI8CyEcsgeLc/JB1BmU=",
   },
 ];
 const accountSeedPromises = new WeakMap();
@@ -100,7 +100,7 @@ async function verifyPassword(password, encodedHash) {
   const iterations = Number(iterationsText);
   const salt = base64ToBytes(saltText || "");
   if (algorithm !== "pbkdf2_sha256" ||
-      !Number.isInteger(iterations) || iterations < 100000 || iterations > 500000 ||
+      iterations !== PASSWORD_HASH_ITERATIONS ||
       !salt || !expectedHash) {
     return false;
   }
@@ -261,37 +261,44 @@ async function handleAuth(request, env, pathname) {
       return errorResponse("Проверьте адрес электронной почты и пароль.");
     }
 
-    const attempt = await loginRateLimit(env, request, email);
-    if (attempt.limited) return errorResponse("Слишком много попыток. Попробуйте через 15 минут.", 429);
+    try {
+      const attempt = await loginRateLimit(env, request, email);
+      if (attempt.limited) {
+        return errorResponse("Слишком много попыток. Попробуйте через 15 минут.", 429);
+      }
 
-    const user = await env.DB.prepare(
-      "SELECT id, email, password_hash, role FROM users WHERE email = ?",
-    ).bind(email).first();
-    const hashToCheck = user ? user.password_hash : SEEDED_ACCOUNTS[0].passwordHash;
-    const valid = await verifyPassword(password, hashToCheck);
-    if (!user || !valid) {
-      return errorResponse("Неверный адрес электронной почты или пароль.", 401);
+      const user = await env.DB.prepare(
+        "SELECT id, email, password_hash, role FROM users WHERE email = ?",
+      ).bind(email).first();
+      const hashToCheck = user ? user.password_hash : SEEDED_ACCOUNTS[0].passwordHash;
+      const valid = await verifyPassword(password, hashToCheck);
+      if (!user || !valid) {
+        return errorResponse("Неверный адрес электронной почты или пароль.", 401);
+      }
+
+      await env.DB.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?")
+        .bind(attempt.key).run();
+      const token = newSessionToken();
+      const now = Math.floor(Date.now() / 1000);
+      await env.DB.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").bind(now).run();
+      await env.DB.prepare(
+        "INSERT INTO auth_sessions (session_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
+      ).bind(
+        await digestBase64(token),
+        user.id,
+        now + SESSION_TTL_SECONDS,
+        now,
+      ).run();
+
+      return authJsonResponse(
+        { user: { id: user.id, email: user.email, role: user.role } },
+        200,
+        { "set-cookie": sessionCookie(request, token, SESSION_TTL_SECONDS) },
+      );
+    } catch (error) {
+      console.error("Ошибка обработки входа.", error);
+      return errorResponse("Внутренняя ошибка сервера.", 500);
     }
-
-    await env.DB.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?")
-      .bind(attempt.key).run();
-    const token = newSessionToken();
-    const now = Math.floor(Date.now() / 1000);
-    await env.DB.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").bind(now).run();
-    await env.DB.prepare(
-      "INSERT INTO auth_sessions (session_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
-    ).bind(
-      await digestBase64(token),
-      user.id,
-      now + SESSION_TTL_SECONDS,
-      now,
-    ).run();
-
-    return authJsonResponse(
-      { user: { id: user.id, email: user.email, role: user.role } },
-      200,
-      { "set-cookie": sessionCookie(request, token, SESSION_TTL_SECONDS) },
-    );
   }
 
   if (pathname === "/api/auth/logout") {
