@@ -91,15 +91,19 @@
   function revealAdminInterface() {
     const body = document.body;
     const panel = document.querySelector(".admin-scroll");
-    for (const element of [body, panel]) {
+    for (const element of [document.documentElement, body, panel]) {
       if (!element) continue;
       element.hidden = false;
       element.removeAttribute("hidden");
+      element.classList.remove("hidden");
       element.style.removeProperty("display");
-      element.style.opacity = "1";
-      element.style.visibility = "visible";
+      element.style.removeProperty("opacity");
+      element.style.removeProperty("visibility");
+      element.style.setProperty("opacity", "1", "important");
+      element.style.setProperty("visibility", "visible", "important");
     }
-    if (body) body.style.display = "flex";
+    if (body) body.style.setProperty("display", "flex", "important");
+    if (panel) panel.style.setProperty("display", "block", "important");
   }
 
   const style = document.createElement("style");
