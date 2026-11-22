@@ -300,6 +300,7 @@
   /* Сообщения без мигания */
   .message-row {
     display: flex;
+    flex: 0 0 auto;
     gap: 12px;
     align-items: flex-start;
     max-width: 82%;
@@ -385,6 +386,7 @@
     margin-top: 6px;
     display: flex;
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
   }
@@ -2023,7 +2025,7 @@
 
   .messages-area > .message-row.mine:first-child {
     margin-top: 56px;
-    margin-bottom: -56px;
+    margin-bottom: 0;
   }
 
   .black-yellow-privacy-banner {

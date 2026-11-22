@@ -82,9 +82,23 @@
     }
     const toolbar = document.createElement("div");
     toolbar.className = "auth-toolbar";
-    toolbar.innerHTML = `<span></span><button type="button">🚪 Выйти</button>`;
-    toolbar.querySelector("span").textContent = user.email;
-    bindLogoutButton(toolbar.querySelector("button"));
+    toolbar.setAttribute("role", "toolbar");
+    toolbar.setAttribute("aria-label", "Управление аккаунтом");
+
+    if (user.role === "admin" && !isAdminPage) {
+      const adminButton = document.createElement("button");
+      adminButton.type = "button";
+      adminButton.className = "admin-link";
+      adminButton.textContent = "👑 Админ-панель";
+      adminButton.addEventListener("click", () => location.assign("/admin.html"));
+      toolbar.appendChild(adminButton);
+    }
+
+    const logoutButton = document.createElement("button");
+    logoutButton.type = "button";
+    logoutButton.textContent = "🚪 Выйти";
+    bindLogoutButton(logoutButton);
+    toolbar.appendChild(logoutButton);
     document.body.appendChild(toolbar);
   }
 
@@ -112,34 +126,34 @@
     .auth-toolbar {
       position: fixed;
       z-index: 10000;
-      top: 10px;
-      left: 10px;
+      top: 6px;
+      left: 6px;
       display: flex;
       align-items: center;
-      gap: 8px;
-      max-width: calc(100vw - 20px);
-      padding: 6px 8px;
+      gap: 5px;
+      max-width: calc(100vw - 12px);
+      padding: 4px;
       color: #fff2cc;
       background: rgba(43, 23, 8, 0.94);
       border: 1px solid #d4af37;
       border-radius: 8px;
       box-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
-      font: 13px Georgia, serif;
-    }
-    .auth-toolbar span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      font: 12px Georgia, serif;
     }
     .auth-toolbar button {
       flex: 0 0 auto;
-      padding: 5px 10px;
+      padding: 4px 8px;
       color: #fff2cc;
       background: #6b210e;
       border: 1px solid #d4af37;
       border-radius: 6px;
-      font: bold 13px Georgia, serif;
+      font: bold 12px Georgia, serif;
+      white-space: nowrap;
       cursor: pointer;
+    }
+    .auth-toolbar .admin-link {
+      color: #ffd700;
+      background: #3c260e;
     }
   `;
   document.head.appendChild(style);
