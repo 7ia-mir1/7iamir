@@ -1040,14 +1040,8 @@
                 ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h);
                 drawSceneAdditions(img, rect);
             } else {
-                let bgKey = currentLoc;
-                if (currentLoc === 'izba') bgKey = userGender === 'man' ? 'izba_man' : 'izba_woman';
                 ctx.fillStyle = '#1e140c';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ffd700';
-                ctx.font = '24px Georgia';
-                ctx.textAlign = 'center';
-                ctx.fillText(`Положите файл "${bgKey}.jpg" в папку Gornitsa`, canvas.width / 2, canvas.height / 2);
             }
 
             drawOverlays();
