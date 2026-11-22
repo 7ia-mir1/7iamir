@@ -57,6 +57,14 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id
     ON auth_sessions (user_id);
 
+CREATE TABLE IF NOT EXISTS online_presence (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    last_seen_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_online_presence_last_seen
+    ON online_presence (last_seen_at);
+
 CREATE TABLE IF NOT EXISTS password_reset_codes (
     user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     code_hash TEXT NOT NULL,

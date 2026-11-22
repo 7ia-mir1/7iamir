@@ -2477,10 +2477,10 @@
       <aside class="sidebar-online">
         <header class="chat-header">
           <img class="header-group-img" src="images/header_group.jpg" alt="Люди на телеге">
-          <div class="header-subtitle" id="onlineCountLabel">Анонимная связь. В сети: 4 ID</div>
+          <div class="header-subtitle" id="onlineCountLabel">Анонимная связь. В сети: … ID</div>
           <div class="my-id-badge" id="myIdBadge">Ваш ID: загрузка...</div>
         </header>
-        <button type="button" class="supreme-disabled" aria-pressed="false">Чат с Верховным</button>
+        <button type="button" class="supreme-disabled" aria-disabled="true" disabled>Чат с Верховным</button>
         <div class="online-list" id="onlineList">
           <!-- Заполняется скриптом -->
         </div>
@@ -2489,7 +2489,7 @@
       <!-- Основное окно чата -->
       <main class="chat-main">
         <div class="active-dialog-bar">
-          <span id="currentRoomTitle">Диалог с ID 7041 (видно только номера ID)</span>
+          <span id="currentRoomTitle">Общий зал</span>
         </div>
 
         <!-- Лента сообщений -->
@@ -2646,38 +2646,20 @@
   /********************************************************************
    * КОНФИГУРАЦИЯ И ОНЛАЙН ID
    ********************************************************************/
-  const STORAGE_KEY = `7ia_mir_chat_messages_v3_${localStorage.getItem('GORNITSA_USER_ID') || 'guest'}`;
-  const CHAT_API_URL = '/api/chat';
-
-  let myId = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id');
-  if (!myId) {
-    myId = String(Math.floor(1000 + Math.random() * 9000));
-    sessionStorage.setItem('7ia_my_id', myId);
+  const myId = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id') || '';
+  if (!/^\d{1,10}$/.test(myId)) {
+    window.location.replace('/login.html');
   }
+  const STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+  const CHAT_API_URL = '/api/chat';
+  const PRESENCE_API_URL = '/api/presence';
+
   document.getElementById('myIdBadge').textContent = `Ваш ID: ${myId}`;
 
   const onlineUsers = [
-    { id: 'ALL', label: 'Общий зал', avatar: '🏡', online: true, strictNoSave: false },
-    { id: '7041', label: 'ID 7041', avatar: '🧑🏼', online: true, strictNoSave: false },
-    { id: '8052', label: 'ID 8052', avatar: '🐱', online: true, strictNoSave: false },
-    { id: '5013', label: 'ID 5013', avatar: '🧙‍♂️', online: true, strictNoSave: false },
-    { id: '9004', label: 'ID 9004', avatar: '🦉', online: false, strictNoSave: false }
+    { id: 'ALL', label: 'Общий зал', avatar: '🏡', online: true, strictNoSave: false }
   ];
-
-  const TEST_TARGET_IDS = new Set(['7041', '8052', '5013', '9004', 'SUPREME']);
-  const TEST_REPLY_LINES = [
-    'Слышу тебя, добрый путник. Что тревожит твою душу?',
-    'Ух, слова твои долетели даже до моей избушки. Рассказывай!',
-    'Не спеши, мил человек: у каждого сообщения своя тропинка.',
-    'Премудрый собеседник тебя услышал. Чем ещё поделишься?',
-    'Вот это весть! Запишу её в свою волшебную книгу.'
-  ];
-
-  function isTestTargetId(targetId) {
-    return TEST_TARGET_IDS.has(String(targetId));
-  }
-
-  let selectedTargetId = '7041';
+  let selectedTargetId = 'ALL';
 
   let messages = [];
 
@@ -2695,17 +2677,14 @@
    * 1. РЕНДЕР СПИСКА ОНЛАЙН ID С ОТЧЁТЛИВЫМ ВЫДЕЛЕНИЕМ АКТИВНОГО ЧАТА
    ********************************************************************/
   const onlineListEl = document.getElementById('onlineList');
-  const supremeChatBtnEl = document.querySelector('.supreme-disabled');
   const currentRoomTitleEl = document.getElementById('currentRoomTitle');
   const privacyStatusPillEl = document.getElementById('privacyStatusPill');
   const bottomSystemNoticeEl = document.getElementById('bottomSystemNotice');
 
   function renderOnlineList() {
     onlineListEl.innerHTML = '';
-    let onlineCount = 1;
 
     onlineUsers.forEach(u => {
-      if (u.online && u.id !== 'ALL') onlineCount++;
       const isSelected = u.id === selectedTargetId;
       const item = document.createElement('div');
       item.className = 'user-item' + (isSelected ? ' active' : '');
@@ -2725,29 +2704,65 @@
       onlineListEl.appendChild(item);
     });
 
-    supremeChatBtnEl.classList.toggle('active', selectedTargetId === 'SUPREME');
-    supremeChatBtnEl.setAttribute('aria-pressed', String(selectedTargetId === 'SUPREME'));
-    document.getElementById('onlineCountLabel').textContent = `Анонимная связь. В сети: ${onlineCount} ID`;
+    document.getElementById('onlineCountLabel').textContent =
+      `Анонимная связь. В сети: ${onlineUsers.length} ID`;
   }
 
   function updateRoomHeader() {
     const target = onlineUsers.find(u => u.id === selectedTargetId);
-    if (selectedTargetId === 'SUPREME') {
-      currentRoomTitleEl.textContent = 'Чат с Верховным';
-    } else if (!target || target.id === 'ALL') {
+    if (selectedTargetId === 'ALL') {
       currentRoomTitleEl.textContent = 'Общий зал (видят все онлайн ID)';
     } else {
-      currentRoomTitleEl.textContent = `Активный диалог с ${target.label} (видно только номера ID)`;
+      const label = target ? target.label : `ID ${selectedTargetId}`;
+      currentRoomTitleEl.textContent = target
+        ? `Активный диалог с ${label}`
+        : `Активный диалог с ${label} (не в сети)`;
     }
     updatePrivacyBadge();
   }
 
-  supremeChatBtnEl.addEventListener('click', () => {
-    selectedTargetId = 'SUPREME';
-    renderOnlineList();
-    updateRoomHeader();
-    renderMessages({ forceScrollBottom: true });
-  });
+  let presenceLoadInProgress = false;
+  let lastPresenceErrorAt = 0;
+
+  async function refreshOnlineUsers() {
+    if (presenceLoadInProgress) return;
+    presenceLoadInProgress = true;
+    try {
+      const response = await fetch(PRESENCE_API_URL, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (!Array.isArray(result.users)) throw new Error('Некорректный ответ API присутствия');
+
+      const contacts = result.users
+        .map(user => String(user.id || ''))
+        .filter(id => /^\d{1,10}$/.test(id) && id !== myId)
+        .map(id => ({
+          id,
+          label: `ID ${id}`,
+          avatar: '',
+          online: true,
+          strictNoSave: false
+        }));
+      onlineUsers.splice(0, onlineUsers.length, onlineUsers[0], ...contacts);
+      renderOnlineList();
+      updateRoomHeader();
+      lastPresenceErrorAt = 0;
+    } catch (error) {
+      if (Date.now() - lastPresenceErrorAt > 30000) {
+        console.error('Не удалось обновить список пользователей онлайн:', error);
+        lastPresenceErrorAt = Date.now();
+      }
+    } finally {
+      presenceLoadInProgress = false;
+    }
+  }
+
+  renderOnlineList();
+  refreshOnlineUsers();
+  window.setInterval(refreshOnlineUsers, 8000);
 
   /********************************************************************
    * 2, 3. ЛОГИКА ОПЦИЙ СОХРАНЕНИЯ И ЧЁРНО-ЖЁЛТАЯ ПЛАШКА ПОД ЧАТОМ
@@ -3133,8 +3148,7 @@
     return d.toTimeString().slice(0, 5);
   }
 
-  function addMessageToChat(payload, options = {}) {
-    const { skipServer = false } = options;
+  function addMessageToChat(payload) {
     const autoDel = autoDeleteModeEl.value;
 
     let expiresAt = null;
@@ -3167,13 +3181,6 @@
       deleteScope: deleteScope
     };
 
-    const isLocalTestMessage = skipServer ||
-      isTestTargetId(newMsg.targetId) ||
-      isTestTargetId(newMsg.senderId);
-    if (isLocalTestMessage) {
-      newMsg.localOnly = true;
-    }
-
     if (isLocalSaveDisabled()) {
       newMsg.noSave = true;
     }
@@ -3181,21 +3188,6 @@
     messages.push(newMsg);
     saveMessagesIfNeeded();
     renderMessages({ forceScrollBottom: shouldScrollDown });
-
-    if (isFromMe && isTestTargetId(newMsg.targetId)) {
-      window.setTimeout(() => {
-        const originalMessage = messages.find(message => message.id === newMsg.id);
-        if (!originalMessage || originalMessage.deletedForMe) return;
-        const reply = TEST_REPLY_LINES[Math.floor(Math.random() * TEST_REPLY_LINES.length)];
-        addMessageToChat({
-          senderId: newMsg.targetId,
-          targetId: myId,
-          text: reply
-        }, { skipServer: true });
-      }, 1700);
-    }
-
-    if (isLocalTestMessage) return;
 
     sendMessageToServer(newMsg).catch(error => {
       newMsg.synced = false;

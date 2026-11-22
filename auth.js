@@ -3,6 +3,7 @@
   const isIndexPage = location.pathname === "/" || location.pathname.endsWith("/index.html");
   const isAdminPage = location.pathname.endsWith("/admin.html");
   const loginUrl = `/login.html?next=${encodeURIComponent(location.pathname + location.search)}`;
+  let lastPresenceHeartbeatErrorAt = 0;
   if (isIndexPage) {
     const navigation = document.getElementById("topNavBar");
     const gear = document.getElementById("topGearBtn");
@@ -20,6 +21,25 @@
       throw new Error(`Не удалось проверить сессию (HTTP ${response.status}).`);
     }
     return (await response.json()).user;
+  }
+
+  async function sendPresenceHeartbeat() {
+    try {
+      const response = await fetch("/api/presence", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: "{}",
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      lastPresenceHeartbeatErrorAt = 0;
+    } catch (error) {
+      if (Date.now() - lastPresenceHeartbeatErrorAt > 30000) {
+        console.warn("Не удалось обновить статус присутствия.", error);
+        lastPresenceHeartbeatErrorAt = Date.now();
+      }
+    }
   }
 
   async function logout() {
@@ -127,6 +147,8 @@
       location.replace("/index.html");
       return null;
     }
+    sendPresenceHeartbeat();
+    window.setInterval(sendPresenceHeartbeat, 20000);
     if (isAdminPage) revealAdminInterface();
 
     localStorage.setItem(USER_ID_KEY, user.id);

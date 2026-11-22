@@ -33,6 +33,7 @@ function boundedLimit(value, fallback = 50) {
 
 const SESSION_COOKIE_NAME = "gornitsa_session";
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+const PRESENCE_TTL_SECONDS = 60;
 const PASSWORD_HASH_ITERATIONS = 100000;
 const RESET_CODE_TTL_SECONDS = 10 * 60;
 const RESET_CODE_COOLDOWN_SECONDS = 60;
@@ -420,6 +421,33 @@ async function handleAuth(request, env, pathname) {
 const MAX_YAGA_HISTORY_MESSAGES = 36;
 const MAX_YAGA_HISTORY_CHARS = 32000;
 
+async function handlePresence(request, env, session) {
+  if (request.method !== "GET" && request.method !== "POST") {
+    return errorResponse("Метод не поддерживается.", 405);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (request.method === "POST") {
+    await env.DB.prepare(
+      `INSERT INTO online_presence (user_id, last_seen_at) VALUES (?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET last_seen_at = excluded.last_seen_at`,
+    ).bind(session.id, now).run();
+  }
+
+  const result = await env.DB.prepare(
+    `SELECT presence.user_id AS id
+     FROM online_presence AS presence
+     INNER JOIN users ON users.id = presence.user_id
+     WHERE presence.last_seen_at >= ? AND presence.user_id <> ?
+     ORDER BY presence.user_id`,
+  ).bind(now - PRESENCE_TTL_SECONDS, session.id).all();
+
+  return jsonResponse({
+    users: result.results,
+    online_count: result.results.length + 1,
+  });
+}
+
 async function handleChat(request, env, session) {
   if (request.method === "GET") {
     const now = Math.floor(Date.now() / 1000);
@@ -504,6 +532,16 @@ async function handleChat(request, env, session) {
         !validDataUrl(imageDataUrl) || !validDataUrl(fileDataUrl) ||
         (!text && !fileUrl && !imageDataUrl && !fileDataUrl)) {
       return errorResponse("Некорректные данные сообщения.");
+    }
+
+    if (targetId !== "ALL") {
+      if (targetId === senderId) {
+        return errorResponse("Нельзя отправить личное сообщение самому себе.");
+      }
+      const recipient = await env.DB.prepare(
+        "SELECT id FROM users WHERE id = ?",
+      ).bind(targetId).first();
+      if (!recipient) return errorResponse("Аккаунт собеседника не найден.", 404);
     }
 
     const createdAt = Math.floor(Date.now() / 1000);
@@ -1179,6 +1217,7 @@ export default {
         return errorResponse("Запрос с другого источника запрещён.", 403);
       }
 
+      if (pathname === "/api/presence") return await handlePresence(request, env, session);
       if (pathname === "/api/chat") return await handleChat(request, env, session);
       if (pathname === "/api/yaga-chat") return await handleYagaChat(request, env);
       if (pathname === "/api/media") return await handleMedia(request, env);
