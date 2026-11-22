@@ -90,7 +90,7 @@
 
   function revealAdminInterface() {
     const body = document.body;
-    const panel = document.querySelector(".admin-scroll");
+    const panel = document.querySelector("main.admin-scroll");
     for (const element of [document.documentElement, body, panel]) {
       if (!element) continue;
       element.hidden = false;
@@ -102,6 +102,7 @@
       element.style.setProperty("opacity", "1", "important");
       element.style.setProperty("visibility", "visible", "important");
     }
+    document.documentElement.style.setProperty("display", "block", "important");
     if (body) body.style.setProperty("display", "flex", "important");
     if (panel) panel.style.setProperty("display", "block", "important");
   }
