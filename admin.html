@@ -448,7 +448,11 @@
 
         function renderAdminMediaSection() {
             const container = document.getElementById('adminMediaCategoriesContainer');
-            if (!container || !window.GornitsaMedia) return;
+            if (!container) return;
+            if (!window.GornitsaMedia || !window.GornitsaMedia.library) {
+                container.textContent = 'Медиатека пока недоступна.';
+                return;
+            }
 
             const categories = [
                 { key: 'gramophone', icon: '📻', name: 'Граммофон — Музыка', desc: 'Инструментальные мелодии в Горнице' },
@@ -636,6 +640,16 @@
             document.getElementById('statUserBank').textContent = `${st.bankBalance} мон.`;
         }
 
+        function safeRenderAdminSection(label, render, statusId, failureMessage) {
+            try {
+                render();
+            } catch (error) {
+                console.error(`Не удалось загрузить раздел «${label}».`, error);
+                const status = document.getElementById(statusId);
+                if (status) status.textContent = failureMessage;
+            }
+        }
+
         function addDemoSuggestion() {
             GornitsaWallet.state.adminSuggestions.unshift({
                 id: Date.now(),
@@ -680,9 +694,21 @@
             window.location.href = 'index.html';
         }
 
-        renderAdminUI();
-        renderAdminMediaSection();
-        window.addEventListener('gornitsaMediaUpdated', renderAdminMediaSection);
+        safeRenderAdminSection('данные пользователя', renderAdminUI, 'statUserBank', 'Данные недоступны');
+        safeRenderAdminSection(
+            'медиатека',
+            renderAdminMediaSection,
+            'adminMediaCategoriesContainer',
+            'Не удалось загрузить медиатеку. Обновите страницу или попробуйте позже.'
+        );
+        window.addEventListener('gornitsaMediaUpdated', () => {
+            safeRenderAdminSection(
+                'медиатека',
+                renderAdminMediaSection,
+                'adminMediaCategoriesContainer',
+                'Не удалось загрузить медиатеку. Обновите страницу или попробуйте позже.'
+            );
+        });
     </script>
     <script src="auth.js"></script>
 </body>

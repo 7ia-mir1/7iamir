@@ -68,6 +68,20 @@
     document.body.appendChild(toolbar);
   }
 
+  function revealAdminInterface() {
+    const body = document.body;
+    const panel = document.querySelector(".admin-scroll");
+    for (const element of [body, panel]) {
+      if (!element) continue;
+      element.hidden = false;
+      element.removeAttribute("hidden");
+      element.style.removeProperty("display");
+      element.style.opacity = "1";
+      element.style.visibility = "visible";
+    }
+    if (body) body.style.display = "flex";
+  }
+
   const style = document.createElement("style");
   style.textContent = `
     .auth-toolbar {
@@ -113,11 +127,11 @@
       location.replace("/index.html");
       return null;
     }
+    if (isAdminPage) revealAdminInterface();
 
     localStorage.setItem(USER_ID_KEY, user.id);
     sessionStorage.setItem("7ia_my_id", user.id);
 
-    if (isAdminPage) document.body.style.visibility = "";
     if (isIndexPage) {
       const isAdmin = user.role === "admin";
       if (!isAdmin) {
