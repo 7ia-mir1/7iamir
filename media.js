@@ -270,6 +270,9 @@
 
                 this.apiSyncReady = true;
                 this.save();
+                if (this.bgCategory && document.getElementById('gornitsaBgMusicBar')) {
+                    this.startBackgroundMusic(this.bgCategory, this.bgIndex);
+                }
             } catch (error) {
                 this.apiSyncReady = true;
                 console.warn('Не удалось загрузить общую медиатеку:', error);
@@ -605,23 +608,16 @@
 
             this.bgCategory = category || 'gramophone';
             const list = this.library[this.bgCategory] || [];
-            if (list.length === 0) return;
 
             let targetIdx = typeof requestedIndex === 'number' ? requestedIndex : this.bgIndex;
             const enabledIndices = this.getEnabledIndices(this.bgCategory);
 
-            if (enabledIndices.length === 0) {
-                // Если все файлы были временно закрыты, открываем окно настроек, чтобы пользователь мог включить нужные
-                this.openPlayerModal(this.bgCategory);
-                return;
-            }
-
-            if (!enabledIndices.includes(targetIdx)) {
+            if (enabledIndices.length > 0 && !enabledIndices.includes(targetIdx)) {
                 targetIdx = enabledIndices[0];
             }
             this.bgIndex = targetIdx;
 
-            const item = list[this.bgIndex];
+            const item = enabledIndices.includes(this.bgIndex) ? list[this.bgIndex] : null;
             const meta = CATEGORY_META[this.bgCategory] || CATEGORY_META.gramophone;
             const vol = this.getVolume(this.bgCategory);
 
@@ -641,8 +637,8 @@
                 document.body.appendChild(bar);
             }
 
-            let url = (item.url || '').trim();
-            if (url.startsWith('indexeddb:')) {
+            let url = item ? (item.url || '').trim() : '';
+            if (item && url.startsWith('indexeddb:')) {
                 const fileId = url.replace('indexeddb:', '');
                 if (!this.blobUrlCache[fileId]) {
                     this.blobUrlCache[fileId] = await LocalFileStore.getFileUrl(fileId);
@@ -651,7 +647,12 @@
             }
 
             let engineHTML = '';
-            if (url.startsWith('synth:')) {
+            if (!item) {
+                const emptyMessage = list.length === 0
+                    ? 'Плейлист пока пуст. Откройте список, чтобы добавить записи.'
+                    : 'Все записи отключены. Откройте список, чтобы включить нужные.';
+                engineHTML = `<div style="margin-top:8px; padding:9px 10px; background:rgba(0,0,0,0.3); border-radius:7px; color:#ffe599; font-size:12.5px;">${emptyMessage}</div>`;
+            } else if (url.startsWith('synth:')) {
                 const mode = url.split(':')[1] || 'waltz';
                 FairyTaleSynth.play(mode, vol / 100);
                 engineHTML = `
@@ -691,8 +692,8 @@
                         <div style="font-size:12px; color:#ffd700; font-weight:bold;">
                             ${meta.shortTitle} • Активно: ${enabledIndices.length}/${list.length}
                         </div>
-                        <div style="font-size:13.5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;" title="${item.title}">
-                            🎵 ${item.title}
+                        <div style="font-size:13.5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;" title="${item ? item.title : ''}">
+                            ${item ? `🎵 ${item.title}` : (list.length === 0 ? 'Плейлист пока пуст' : 'Все записи отключены')}
                         </div>
                     </div>
                     <div style="display:flex; gap:5px; flex-shrink:0; align-items:center;">
@@ -701,7 +702,7 @@
                         <button id="bgSettingsToggleBtn" title="Развернуть/свернуть настройки очереди и звука" style="background:${this.bgSettingsOpen ? '#8c6239' : '#4a2c14'}; color:#ffd700; border:1.5px solid #ffd700; border-radius:6px; padding:4px 9px; cursor:pointer; font-size:12px; font-weight:bold; font-family:'Georgia',serif;">
                             ⚙ Настройки ${this.bgSettingsOpen ? '▲' : '▼'}
                         </button>
-                        <button id="bgExpandModalBtn" title="Открыть в большом окне" style="background:#2e5cb8; color:#fff; border:1px solid #ffd700; border-radius:6px; padding:4px 7px; cursor:pointer; font-size:12px;">❐</button>
+                        <button id="bgExpandModalBtn" title="Открыть полный плейлист" style="background:#2e5cb8; color:#fff; border:1px solid #ffd700; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px;">❐ Развернуть</button>
                         <button id="bgStopBtn" title="Выключить" style="background:#8b0000; color:#fff; border:1px solid #ffd700; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; font-weight:bold;">✖</button>
                     </div>
                 </div>
@@ -782,6 +783,13 @@
             if (!container || !this.bgCategory) return;
             const list = this.library[this.bgCategory] || [];
             container.innerHTML = '';
+            if (list.length === 0) {
+                const emptyMessage = document.createElement('div');
+                emptyMessage.textContent = 'Плейлист пока пуст';
+                emptyMessage.style.cssText = 'padding:8px; color:#ffe599; text-align:center; font-size:12px;';
+                container.appendChild(emptyMessage);
+                return;
+            }
 
             list.forEach((item, idx) => {
                 const isCurrent = (idx === this.bgIndex && !item.disabled);

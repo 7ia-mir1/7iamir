@@ -346,14 +346,14 @@
             window.location.href = 'detektiv.html';
         }
 
-        // Открываем общий список в модальном плеере; фоновый режим доступен из самого окна.
+        // Для Граммофона и Кота Баюна сначала открываем нижний мини-плеер.
         function triggerAudioBar(section) {
-            if (window.GornitsaMedia && typeof window.GornitsaMedia.openPlayerModal === 'function') {
-                window.GornitsaMedia.openPlayerModal(section);
+            if (window.GornitsaMedia && typeof window.GornitsaMedia.startBackgroundMusic === 'function') {
+                window.GornitsaMedia.startBackgroundMusic(section);
                 return;
             }
             console.error('Модуль медиаплеера не загружен.');
-            showModal(section === 'gramophone' ? "Старинный граммофон" : "Кот Баюн", "Медиаплеер временно недоступен. Обновите страницу и попробуйте снова.");
+            showModal(section === 'gramophone' ? "Старинный граммофон" : "Кот Баюн", "Мини-плеер временно недоступен. Обновите страницу и попробуйте снова.");
         }
 
         // Для Зеркала и Кинотеатра открываем видеоплеер
