@@ -1232,6 +1232,52 @@ async function handleAdminDatabaseExport(request, env) {
   });
 }
 
+async function handleAdminFilesExport(request, env) {
+  if (request.method !== "GET") {
+    return errorResponse("Метод не поддерживается.", 405);
+  }
+
+  const headers = {
+    "User-Agent": "Cloudflare-Worker",
+    "Accept": "application/vnd.github+json",
+  };
+  if (env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+  }
+
+  let archiveResponse;
+  try {
+    archiveResponse = await fetch(
+      "https://api.github.com/repos/7ia-mir1/7iamir/zipball/main",
+      { headers },
+    );
+  } catch (error) {
+    console.error("Не удалось запросить архив сайта у GitHub.", error);
+    return errorResponse("Не удалось связаться с GitHub для получения архива.", 502);
+  }
+
+  const upstreamContentType = archiveResponse.headers.get("content-type") || "";
+  if (!archiveResponse.ok ||
+      !/application\/(?:zip|octet-stream|x-zip-compressed)/i.test(upstreamContentType) ||
+      !archiveResponse.body) {
+    console.error(
+      "GitHub не вернул ZIP-архив сайта.",
+      archiveResponse.status,
+      upstreamContentType,
+    );
+    return errorResponse("GitHub не смог предоставить ZIP-архив сайта.", 502);
+  }
+
+  return new Response(archiveResponse.body, {
+    headers: {
+      "content-type": "application/zip",
+      "content-disposition": 'attachment; filename="7iamir-site-files.zip"',
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
 function normalizeSql(sql) {
   return sql.toLowerCase()
     .replace(/\bif\s+not\s+exists\b/g, "")
@@ -1511,6 +1557,9 @@ export default {
 
       if (pathname === "/api/admin/export-db") {
         return await handleAdminDatabaseExport(request, env);
+      }
+      if (pathname === "/api/admin/export-files") {
+        return await handleAdminFilesExport(request, env);
       }
       if (pathname === "/api/admin/system-health") {
         return await handleAdminSystemHealth(request, env);

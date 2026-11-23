@@ -464,8 +464,9 @@
             <p class="health-note">Скачивайте резервную копию D1 отдельно от архива статических файлов сайта.</p>
             <div class="backup-actions">
                 <a class="action-btn backup-link" href="/api/admin/export-db" download>⬇ Скачать базу данных (.sql)</a>
-                <a class="action-btn gold backup-link" href="https://github.com/tataole/7ia-mir1/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer">⬇ Скачать архив файлов сайта (.zip)</a>
+                <button class="action-btn gold backup-link" id="downloadSiteArchiveBtn" type="button" onclick="downloadSiteArchive()">⬇ Скачать архив файлов сайта (.zip)</button>
             </div>
+            <p class="health-note" id="siteArchiveStatus" role="status" aria-live="polite"></p>
         </section>
 
         <div class="tabs-row">
@@ -933,6 +934,44 @@
             const staticMib = SITE_STATIC_ASSET_BYTES / (1024 * 1024);
             document.getElementById('staticFilesWeight').textContent =
                 `${SITE_STATIC_ASSET_COUNT} файлов • ${staticMb.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB (${staticMib.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MiB)`;
+        }
+
+        async function downloadSiteArchive() {
+            const button = document.getElementById('downloadSiteArchiveBtn');
+            const status = document.getElementById('siteArchiveStatus');
+            button.disabled = true;
+            status.textContent = 'Подготавливается архив…';
+
+            try {
+                const response = await fetch('/api/admin/export-files', {
+                    method: 'GET',
+                    credentials: 'include',
+                    cache: 'no-store',
+                    headers: { Accept: 'application/zip' },
+                });
+                if (!response.ok) {
+                    const detail = await response.text();
+                    throw new Error(detail || `HTTP ${response.status}`);
+                }
+
+                const archive = await response.blob();
+                if (!archive.size) throw new Error('Сервер вернул пустой архив.');
+
+                const objectUrl = URL.createObjectURL(archive);
+                const downloadLink = document.createElement('a');
+                downloadLink.href = objectUrl;
+                downloadLink.download = '7iamir-site-files.zip';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove();
+                window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+                status.textContent = 'Архив скачивается.';
+            } catch (error) {
+                console.error('Не удалось скачать архив файлов сайта.', error);
+                status.textContent = `Не удалось скачать архив: ${error.message}`;
+            } finally {
+                button.disabled = false;
+            }
         }
 
         function renderAdminSystemHealth(health) {
