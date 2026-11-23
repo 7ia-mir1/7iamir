@@ -3066,8 +3066,24 @@
    ********************************************************************/
   let myId = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id') || '';
   
-  // Если ID еще не загружен, можно продолжить инициализацию
-  // - функции будут работать корректно, так как проверяют myId перед использованием
+  // Если чат загружен в iframe, пытаемся получить ID из родительского окна
+  async function fetchIdFromParent() {
+    if (window.parent === window) {
+      return null; // Не в iframe
+    }
+    try {
+      // Попытаемся получить ID из родительского окна через window.parent
+      if (window.parent.GornitsaAuth && window.parent.GornitsaAuth.ready) {
+        const user = await window.parent.GornitsaAuth.ready;
+        if (user && typeof user.id === 'string') {
+          return user.id;
+        }
+      }
+    } catch (err) {
+      console.warn('[Chat] Cannot access parent window:', err.message);
+    }
+    return null;
+  }
 
   let STORAGE_KEY = '';
   
@@ -3081,8 +3097,7 @@
       if (myIdBadgeEl) {
         myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
       }
-      console.log(`Chat: MyID updated to ${myId}`);
-      // Refresh will be called by setInterval
+      console.log(`[Chat] MyID updated to ${myId}`);
       return true;
     }
     return false;
@@ -3298,7 +3313,31 @@
   }
 
   renderOnlineList();
-  window.setInterval(refreshOnlineUsers, 15000);
+  window.setInterval(refreshOnlineUsers, 5000);
+
+  // Отправляем heartbeat присутствия каждые 15 секунд
+  async function sendPresenceHeartbeat() {
+    try {
+      const response = await fetch('/api/presence', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'same-origin',
+        cache: 'no-store',
+        body: '{}',
+      });
+      if (!response.ok) {
+        console.warn(`[Chat] Heartbeat failed: HTTP ${response.status}`);
+      } else {
+        console.log('[Chat] Heartbeat sent successfully');
+      }
+    } catch (error) {
+      console.warn('[Chat] Heartbeat error:', error.message);
+    }
+  }
+  
+  // Отправляем heartbeat при загрузке и каждые 15 секунд
+  sendPresenceHeartbeat();
+  window.setInterval(sendPresenceHeartbeat, 15000);
 
   const idCheckInterval = window.setInterval(() => {
     if (updateMyId()) {
@@ -4269,6 +4308,38 @@
       renderMessages({ forceScrollBottom: true });
     });
   }
+
+  // ===== ИНИЦИАЛИЗАЦИЯ ПОЛУЧЕНИЯ ID И ПРИСУТСТВИЯ =====
+  
+  // Функция для инициализации ID из родительского окна или локального хранилища
+  async function initializeChatSession() {
+    // Попытаемся получить ID из родительского окна (если загружено через iframe)
+    const parentId = await fetchIdFromParent();
+    if (parentId) {
+      myId = parentId;
+      STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+      const myIdBadgeEl = document.getElementById('myIdBadge');
+      if (myIdBadgeEl) {
+        myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
+      }
+      console.log(`[Chat] ID loaded from parent window: ${myId}`);
+      // Сразу загружаем онлайн-пользователей
+      refreshOnlineUsers();
+      return;
+    }
+    
+    // Если не удалось получить из родителя, пытаемся получить из собственного хранилища
+    if (updateMyId()) {
+      refreshOnlineUsers();
+      return;
+    }
+    
+    // Если ID еще не загружен, ждем обновления
+    console.log('[Chat] Waiting for ID to load from auth.js...');
+  }
+  
+  // Запускаем инициализацию сразу
+  initializeChatSession();
 
   // ===== КОНЕЦ СИСТЕМЫ БЛОКИРОВОК =====
 
