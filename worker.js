@@ -1360,6 +1360,14 @@ async function handleAdminSystemHealth(request, env) {
     return errorResponse("Метод не поддерживается.", 405);
   }
 
+  let indexCreationError = null;
+  try {
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at ON auth_sessions(expires_at)").run();
+  } catch (error) {
+    indexCreationError = String(error.message || error);
+    console.warn("Ошибка при создании индекса idx_auth_sessions_expires_at:", indexCreationError);
+  }
+
   const tableResult = await env.DB.prepare(
     `SELECT name FROM sqlite_master
      WHERE type = 'table'
@@ -1456,6 +1464,7 @@ async function handleAdminSystemHealth(request, env) {
     },
     security: {
       indexes: indexStatus,
+      indexCreationError: indexCreationError,
       chatImageMaxBytes: MAX_CHAT_IMAGE_BYTES,
       siteImageMaxBytes: 262144,
       loginAttemptsPerWindow: 10,
