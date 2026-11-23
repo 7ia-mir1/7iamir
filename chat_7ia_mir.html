@@ -78,7 +78,8 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 8px 0;
+    padding: 0 0 6px 0;
+    margin-top: -3px;
   }
 
   .header-group-img {
@@ -284,35 +285,47 @@
     background: rgba(207, 179, 130, 0.5);
   }
 
-  .sidebar-btn-with-question {
+  .sidebar-btn-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .btn-info-circle {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    min-width: 32px;
+    padding: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
+    border: 2px solid #261508;
+    color: #261508;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1;
     display: flex;
     align-items: center;
-    gap: 2px;
-  }
-
-  .btn-question {
-    flex: 0 0 auto;
-    color: #ffe8b3;
-    font-weight: 700;
-    font-size: 13px;
+    justify-content: center;
     cursor: pointer;
-    padding: 7px 2px;
-    user-select: none;
     transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   }
 
-  .btn-question:hover {
-    color: var(--gold-accent);
-    text-shadow: 0 0 8px rgba(255, 212, 0, 0.5);
+  .btn-info-circle:hover {
+    background: linear-gradient(135deg, #e8c547 0%, #ddb84a 100%);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4), 0 0 12px rgba(212, 175, 55, 0.5);
+    filter: brightness(1.1);
   }
 
-  .sidebar-service-btn.flex-grow {
-    flex: 1;
+  .btn-info-circle:active {
+    transform: scale(0.95);
   }
 
   .sidebar-service-btn {
     display: flex;
-    width: 100%;
+    flex: 1;
     align-items: center;
     justify-content: center;
     padding: 7px 10px;
@@ -327,6 +340,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    height: 32px;
   }
 
   .sidebar-service-btn:hover {
@@ -350,14 +364,6 @@
   .police-btn:hover {
     filter: brightness(1.12);
     border-color: #4a7acb;
-  }
-
-  /* Иконка вопроса рядом с ПОЛИЦИЯ */
-  .police-btn::before {
-    content: "(?) ";
-    margin-right: 2px;
-    font-size: 16px;
-    margin-left: 6px;
     font-size: 16px;
     margin-left: 6px;
   }
@@ -2892,13 +2898,13 @@
         <!-- Закреплённая панель служебных кнопок -->
         <div class="sidebar-fixed-buttons">
           <button type="button" class="sidebar-service-btn" id="generalChatBtn" data-room="ALL" title="Общий чат для всех">Общий чат</button>
-          <div class="sidebar-btn-with-question">
-            <span class="btn-question" onclick="openSupremeInfoModal(); event.stopPropagation();" title="Информация">(?) </span>
-            <button type="button" class="sidebar-service-btn flex-grow" id="supremeChatBtn" title="Чат с Верховным">Чат с Верховным</button>
+          <div class="sidebar-btn-row">
+            <button type="button" class="btn-info-circle" onclick="openSupremeInfoModal(); event.stopPropagation();" title="Информация о Верховном" aria-label="Информация">?</button>
+            <button type="button" class="sidebar-service-btn" id="supremeChatBtn" title="Чат с Верховным">Чат с Верховным</button>
           </div>
-          <div class="sidebar-btn-with-question">
-            <span class="btn-question" onclick="openPoliceInfoModal(); event.stopPropagation();" title="Правила">(?) </span>
-            <button type="button" class="sidebar-service-btn police-btn flex-grow" id="policeBtn" title="Служба порядка">ПОЛИЦИЯ</button>
+          <div class="sidebar-btn-row">
+            <button type="button" class="btn-info-circle" onclick="openPoliceInfoModal(); event.stopPropagation();" title="Правила ПОЛИЦИИ" aria-label="Информация">?</button>
+            <button type="button" class="sidebar-service-btn police-btn" id="policeBtn" title="Служба порядка">ПОЛИЦИЯ</button>
           </div>
           <button type="button" class="sidebar-service-btn" id="blocksBtn" title="Управление заблокированными пользователями">Блокировки</button>
         </div>
@@ -3064,15 +3070,51 @@
   /********************************************************************
    * КОНФИГУРАЦИЯ И ОНЛАЙН ID
    ********************************************************************/
-  const myId = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id') || '';
-  if (!/^\d{1,10}$/.test(myId)) {
-    window.location.replace('/login.html');
+  let myId = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id') || '';
+  
+  // Если ID еще не загружен, можно продолжить инициализацию
+  // - функции будут работать корректно, так как проверяют myId перед использованием
+
+  let STORAGE_KEY = '';
+  
+  // Функция для обновления myId (вызывается когда ID загружается через auth.js)
+  function updateMyId() {
+    const newId = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id') || '';
+    if (newId && /^\d{1,10}$/.test(newId) && newId !== myId) {
+      myId = newId;
+      STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+      const myIdBadgeEl = document.getElementById('myIdBadge');
+      if (myIdBadgeEl) {
+        myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
+      }
+      console.log(`Chat: MyID updated to ${myId}`);
+      return true;
+    }
+    return false;
   }
-  const STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+
+  if (myId && /^\d{1,10}$/.test(myId)) {
+    STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+  }
+  
   const CHAT_API_URL = '/api/chat';
   const PRESENCE_API_URL = '/api/presence';
 
-  document.getElementById('myIdBadge').textContent = `Ваш ID: ${myId}`;
+  const myIdBadgeEl = document.getElementById('myIdBadge');
+  if (myIdBadgeEl) {
+    if (myId && /^\d{1,10}$/.test(myId)) {
+      myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
+    } else {
+      myIdBadgeEl.textContent = 'Ваш ID: загрузка...';
+      // Начать мониторить на обновление ID из sessionStorage
+      let checkIdCount = 0;
+      const checkIdInterval = setInterval(() => {
+        if (updateMyId() || ++checkIdCount > 50) {
+          clearInterval(checkIdInterval);
+        }
+      }, 100);
+    }
+  }
 
   const onlineUsers = [
     { id: 'ALL', label: 'Общий зал', avatar: '🏡', online: true, strictNoSave: false }
@@ -3082,8 +3124,11 @@
 
   let messages = [];
 
-  const savedRaw = localStorage.getItem(STORAGE_KEY);
-  if (savedRaw) {
+  // Загрузка сохраненных сообщений из localStorage (если ключ доступен)
+  function loadSavedMessages() {
+    if (!STORAGE_KEY) return;
+    const savedRaw = localStorage.getItem(STORAGE_KEY);
+    if (!savedRaw) return;
     try {
       const parsed = JSON.parse(savedRaw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -3099,8 +3144,12 @@
               : fallbackCreatedAt + index
           }));
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Ошибка загрузки сохраненных сообщений:', e);
+    }
   }
+
+  loadSavedMessages();
 
   /********************************************************************
    * 1. РЕНДЕР СПИСКА ОНЛАЙН ID С ОТЧЁТЛИВЫМ ВЫДЕЛЕНИЕМ АКТИВНОГО ЧАТА
@@ -3245,6 +3294,16 @@
   refreshOnlineUsers();
   window.setInterval(refreshOnlineUsers, 15000);
 
+  // Периодически проверяем, загружен ли myId из auth.js
+  let idCheckCount = 0;
+  window.setInterval(() => {
+    if (updateMyId()) {
+      idCheckCount = 0;  // Reset on success
+    } else if (++idCheckCount > 100) {
+      clearInterval(this);  // Stop checking after 10 seconds
+    }
+  }, 100);
+
   /********************************************************************
    * 2, 3. ЛОГИКА ОПЦИЙ СОХРАНЕНИЯ И ЧЁРНО-ЖЁЛТАЯ ПЛАШКА ПОД ЧАТОМ
    ********************************************************************/
@@ -3366,6 +3425,7 @@
   }
 
   function saveMessagesIfNeeded() {
+    if (!STORAGE_KEY) return;
     if (isLocalSaveDisabled()) {
       localStorage.removeItem(STORAGE_KEY);
     } else {
@@ -3656,7 +3716,7 @@
       messages[index].deletedForMe = true;
     }
     if (messages.length) saveMessagesIfNeeded();
-    else localStorage.removeItem(STORAGE_KEY);
+    else if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
     renderMessages({ forceScrollBottom: false });
 
     if (scope === 'both' && !message.localOnly) {
@@ -3961,9 +4021,14 @@
 
   document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
     messages = [];
-    localStorage.removeItem(STORAGE_KEY);
+    if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
     renderMessages({ forceScrollBottom: true });
 
+    if (!myId || !/^\d{1,10}$/.test(myId)) {
+      console.warn('MyID not available, skipping server history clear');
+      return;
+    }
+    
     try {
       const response = await fetch(`${CHAT_API_URL}?user_id=${encodeURIComponent(myId)}`, {
         method: 'DELETE',
@@ -4136,9 +4201,12 @@
   }
 
   // Загрузим список блокировок при запуске
-  loadBlockedUsers();
-
-  // Привязка кнопок левой колонки к функциям
+  loadBlockedUsers().then(() => {
+    renderOnlineList();
+  }).catch(e => {
+    console.error('Ошибка при загрузке блокировок:', e);
+    renderOnlineList();
+  });
   const generalChatBtn = document.getElementById('generalChatBtn');
   if (generalChatBtn) {
     generalChatBtn.addEventListener('click', () => {

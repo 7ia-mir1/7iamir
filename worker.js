@@ -469,38 +469,47 @@ async function handlePresence(request, env, session) {
 
   const now = Math.floor(Date.now() / 1000);
   if (request.method === "POST") {
-    await env.DB.prepare(
-      `INSERT INTO online_presence (user_id, last_seen_at) VALUES (?, ?)
-       ON CONFLICT(user_id) DO UPDATE SET last_seen_at = excluded.last_seen_at`,
-    ).bind(session.id, now).run();
+    try {
+      await env.DB.prepare(
+        `INSERT INTO online_presence (user_id, last_seen_at) VALUES (?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET last_seen_at = excluded.last_seen_at`,
+      ).bind(session.id, now).run();
+    } catch (err) {
+      console.error("Error updating online_presence:", err);
+    }
   }
 
-  const result = await env.DB.prepare(
-    `SELECT users.id AS id, users.role AS role
-     FROM users
-     LEFT JOIN online_presence AS presence ON presence.user_id = users.id
-     WHERE users.id <> ?
-       AND (
-         presence.last_seen_at >= ?
-         OR EXISTS (
-           SELECT 1 FROM auth_sessions
-           WHERE auth_sessions.user_id = users.id
-             AND auth_sessions.expires_at > ?
+  try {
+    const result = await env.DB.prepare(
+      `SELECT users.id AS id, users.role AS role
+       FROM users
+       LEFT JOIN online_presence AS presence ON presence.user_id = users.id
+       WHERE users.id <> ?
+         AND (
+           COALESCE(presence.last_seen_at, 0) >= ?
+           OR EXISTS (
+             SELECT 1 FROM auth_sessions
+             WHERE auth_sessions.user_id = users.id
+               AND auth_sessions.expires_at > ?
+           )
          )
-       )
-     ORDER BY users.id`,
-  ).bind(session.id, now - PRESENCE_TTL_SECONDS, now).all();
+       ORDER BY users.id`,
+    ).bind(session.id, now - PRESENCE_TTL_SECONDS, now).all();
 
-  const users = result.results.map(user => ({
-    id: user.id,
-    role: user.role,
-    online: true,
-  }));
+    const users = (result.results || []).map(user => ({
+      id: user.id,
+      role: user.role,
+      online: true,
+    }));
 
-  return jsonResponse({
-    users,
-    online_count: users.length + 1,
-  });
+    return jsonResponse({
+      users,
+      online_count: users.length + 1,
+    });
+  } catch (err) {
+    console.error("Error fetching online users:", err);
+    return errorResponse("Ошибка получения списка онлайн пользователей.", 500);
+  }
 }
 
 function isSafeChatFileUrl(value, baseUrl) {
