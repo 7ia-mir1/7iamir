@@ -467,6 +467,11 @@ async function handlePresence(request, env, session) {
     return errorResponse("Метод не поддерживается.", 405);
   }
 
+  if (!session) {
+    console.warn("[Presence] No session found, cannot process presence request");
+    return errorResponse("Требуется вход.", 401);
+  }
+
   const now = Math.floor(Date.now() / 1000);
   
   // Ensure online_presence table exists
@@ -487,9 +492,10 @@ async function handlePresence(request, env, session) {
         `INSERT INTO online_presence (user_id, last_seen_at) VALUES (?, ?)
          ON CONFLICT(user_id) DO UPDATE SET last_seen_at = excluded.last_seen_at`,
       ).bind(session.id, now).run();
-      console.log(`[Presence] User ${session.id} heartbeat recorded at ${now}`);
+      console.log(`[Presence] ✓ User ${session.id} heartbeat recorded at ${now}`);
     } catch (err) {
       console.error("Error updating online_presence:", err);
+      return errorResponse("Ошибка записи статуса присутствия.", 500);
     }
   }
 
@@ -516,7 +522,7 @@ async function handlePresence(request, env, session) {
       online: true,
     }));
 
-    console.log(`[Presence] Returning ${users.length} online users to ${session.id}`);
+    console.log(`[Presence] ✓ Returning ${users.length} online users to ${session.id}: [${users.map(u => u.id).join(', ')}]`);
     return jsonResponse({
       users,
       online_count: users.length + 1,

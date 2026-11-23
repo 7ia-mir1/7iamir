@@ -1242,10 +1242,34 @@
             }
         }
 
+        function restoreLocationFromUrlOnly() {
+            // При перезагрузке (pageshow) восстанавливаем ТОЛЬКО из URL параметров, НЕ из sessionStorage
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const g = params.get('gender');
+                if (g === 'woman' || g === 'man') {
+                    userGender = g;
+                    const gBtn = document.getElementById('genderBtn');
+                    if (gBtn) gBtn.innerText = userGender === 'man' ? "👤 Пол: Мужской" : "👤 Пол: Женский";
+                }
+                // При pageshow используем ТОЛЬКО URL параметры, не sessionStorage
+                const hashLoc = (window.location.hash || '').replace('#', '').trim();
+                const startLoc = params.get('loc') || params.get('location') || hashLoc;
+                if (startLoc && defaultZoneCoords[startLoc]) {
+                    currentLoc = startLoc;
+                }
+            } catch (e) {}
+            if (currentLoc === 'ozero') {
+                initializeOzeroScene();
+            } else {
+                updateNavHighlight();
+            }
+        }
+
         restoreLocationFromUrlOrHistory();
         window.addEventListener('pageshow', () => {
             resizeCanvas();
-            restoreLocationFromUrlOrHistory();
+            restoreLocationFromUrlOnly(); // ← Используем функцию БЕЗ sessionStorage fallback
         });
         window.addEventListener('focus', () => {
             resizeCanvas();

@@ -3359,17 +3359,31 @@
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
-      console.log(`[Chat] Presence API returned:`, result);
+      console.log(`[Chat] ✓ Presence API returned ${result.users?.length || 0} users:`, result.users);
       if (!Array.isArray(result.users)) throw new Error('Некорректный ответ API присутствия');
 
       const contacts = result.users
-        .filter(user => user && user.id !== undefined)
+        .filter(user => {
+          const isValid = user && user.id !== undefined;
+          if (!isValid) console.log(`[Chat] ✗ Skipped invalid user:`, user);
+          return isValid;
+        })
         .map(user => ({
           id: String(user.id),
           role: user.role === 'admin' ? 'admin' : 'user',
           online: Boolean(user.online)
         }))
-        .filter(user => /^\d{1,10}$/.test(user.id) && user.id !== myId)
+        .filter(user => {
+          const isValidId = /^\d{1,10}$/.test(user.id);
+          const isNotMe = user.id !== myId;
+          const isNotBlocked = !isUserBlocked(user.id);
+          
+          if (!isValidId) console.log(`[Chat] ✗ Invalid ID format:`, user.id);
+          if (!isNotMe) console.log(`[Chat] ✗ Skipped self:`, user.id);
+          if (!isNotBlocked) console.log(`[Chat] ✗ User is blocked:`, user.id);
+          
+          return isValidId && isNotMe && isNotBlocked;
+        })
         .map(user => ({
           id: user.id,
           label: `ID ${user.id}`,
@@ -3378,7 +3392,8 @@
           online: user.online,
           strictNoSave: false
         }));
-      console.log(`[Chat] Filtered contacts:`, contacts);
+      
+      console.log(`[Chat] ✓ Final contacts after filtering (${contacts.length}):`, contacts.map(c => c.id));
       onlineUsers.splice(0, onlineUsers.length, onlineUsers[0], ...contacts);
       renderOnlineList();
       updateRoomHeader();
@@ -3390,7 +3405,7 @@
         onlineCountLabel.title = error.message;
       }
       if (Date.now() - lastPresenceErrorAt > 30000) {
-        console.error('Не удалось обновить список пользователей онлайн:', error);
+        console.error('[Chat] ✗ Не удалось обновить список пользователей онлайн:', error);
         lastPresenceErrorAt = Date.now();
       }
     } finally {
