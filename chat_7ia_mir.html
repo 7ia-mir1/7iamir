@@ -3069,6 +3069,7 @@
    ********************************************************************/
   let myId = '';
   let STORAGE_KEY = '';
+  let blockedUsers = [];
   
   const CHAT_API_URL = '/api/chat';
   const PRESENCE_API_URL = '/api/presence';
@@ -3498,6 +3499,7 @@
           if (badge) badge.textContent = `Ваш ID: ${myId}`;
           console.log(`[Chat] Successfully loaded ID on retry: ${myId}`);
           // Инициализируем кнопки при успешной загрузке ID
+          initializeButtonHandlers();
           initializeSupremeButton();
           // Загружаем список блокировок
           initializeBlockedUsersAndRender();
@@ -3509,7 +3511,8 @@
     // ID загружен успешно, запускаем мониторинг
     console.log('[Chat] User ID loaded successfully, starting presence monitoring');
     
-    // Инициализируем кнопку "Чат с Верховным" с правильным ID
+    // Инициализируем кнопки и кнопку "Чат с Верховным" с правильным ID
+    initializeButtonHandlers();
     initializeSupremeButton();
     
     // Загружаем список блокировок и рендерим список онлайна
@@ -3544,6 +3547,32 @@
       }
     } catch (error) {
       console.error('[Chat] ✗ initializeSupremeButton error:', error);
+    }
+  }
+
+  function initializeButtonHandlers() {
+    if (generalChatBtn) {
+      generalChatBtn.addEventListener('click', () => {
+        selectedTargetId = 'ALL';
+        isSupremeChatSelected = false;
+        renderOnlineList();
+        updateRoomHeader();
+        renderMessages({ forceScrollBottom: true });
+      });
+    }
+
+    if (blocksBtn) {
+      blocksBtn.addEventListener('click', openBlocksModal);
+    }
+
+    if (policeBtn) {
+      policeBtn.addEventListener('click', () => {
+        selectedTargetId = '1002';
+        isSupremeChatSelected = false;
+        renderOnlineList();
+        updateRoomHeader();
+        renderMessages({ forceScrollBottom: true });
+      });
     }
   }
 
@@ -4347,15 +4376,18 @@
     }
   }
 
+  // Объявления кнопок (обработчики будут добавлены позже в initializeButtonHandlers())
+  const generalChatBtn = document.getElementById('generalChatBtn');
+  const blocksBtn = document.getElementById('blocksBtn');
+  const supremeChatBtn = document.getElementById('supremeChatBtn');
+  const policeBtn = document.getElementById('policeBtn');
+
   resetToUnlimitedMode();
   renderOnlineList();
   updateRoomHeader();
   renderMessages({ forceScrollBottom: true });
   loadMessagesFromServer();
   setInterval(loadMessagesFromServer, 3000);
-
-  // ===== СИСТЕМА БЛОКИРОВОК =====
-  let blockedUsers = [];
 
   async function loadBlockedUsers() {
     try {
@@ -4481,40 +4513,6 @@
     if (overlay) {
       overlay.classList.remove('open');
     }
-  }
-
-  // Загрузка блокировок теперь выполняется в initializeBlockedUsersAndRender()
-  // которая вызывается в displayUserIdBadge().then() после успешной загрузки ID
-  
-  const generalChatBtn = document.getElementById('generalChatBtn');
-  if (generalChatBtn) {
-    generalChatBtn.addEventListener('click', () => {
-      selectedTargetId = 'ALL';
-      isSupremeChatSelected = false;
-      renderOnlineList();
-      updateRoomHeader();
-      renderMessages({ forceScrollBottom: true });
-    });
-  }
-
-  const blocksBtn = document.getElementById('blocksBtn');
-  if (blocksBtn) {
-    blocksBtn.addEventListener('click', openBlocksModal);
-  }
-
-  const supremeChatBtn = document.getElementById('supremeChatBtn');
-  // supremeChatBtn обработчик добавляется в initializeSupremeButton()
-  // которая вызывается в displayUserIdBadge().then() после успешной загрузки ID
-
-  const policeBtn = document.getElementById('policeBtn');
-  if (policeBtn) {
-    policeBtn.addEventListener('click', () => {
-      selectedTargetId = '1002';
-      isSupremeChatSelected = false;
-      renderOnlineList();
-      updateRoomHeader();
-      renderMessages({ forceScrollBottom: true });
-    });
   }
 
   // ===== ИНИЦИАЛИЗАЦИЯ ПОЛУЧЕНИЯ ID И ПРИСУТСТВИЯ =====
