@@ -3078,24 +3078,47 @@
     }
     try {
       if (window.parent.GornitsaAuth && window.parent.GornitsaAuth.ready) {
-        const user = await window.parent.GornitsaAuth.ready;
+        // Добавляем таймаут, чтобы не зависнуть если parent.ready никогда не resolve
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Parent window initialization timeout')), 3000)
+        );
+        const user = await Promise.race([window.parent.GornitsaAuth.ready, timeoutPromise]);
         if (user && typeof user.id === 'string') {
-          console.log(`[Chat] ID from parent window: ${user.id}`);
+          console.log(`[Chat] ✓ ID from parent window: ${user.id}`);
           return user.id;
         }
+      } else {
+        console.log('[Chat] Parent GornitsaAuth not available');
       }
     } catch (err) {
-      console.error('[Chat] Cannot access parent window:', err.message);
+      console.log(`[Chat] Parent window access failed: ${err.message}`);
     }
     return null;
   }
 
-  // Получение ID из собственного localStorage/sessionStorage
+  // Получение ID из собственного localStorage/sessionStorage и родительского окна
   function getIdFromLocalStorage() {
-    const id = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id') || '';
+    // Сначала попробуем свой контекст (iframe может иметь свой localStorage)
+    let id = localStorage.getItem('GORNITSA_USER_ID') || sessionStorage.getItem('7ia_my_id');
     if (id && /^\d{1,10}$/.test(id)) {
+      console.log(`[Chat] ✓ ID from iframe localStorage: ${id}`);
       return id;
     }
+    
+    // Затем попробуем родительское окно (если это iframe)
+    if (window.parent !== window) {
+      try {
+        id = window.parent.localStorage.getItem('GORNITSA_USER_ID') || 
+             window.parent.sessionStorage.getItem('7ia_my_id');
+        if (id && /^\d{1,10}$/.test(id)) {
+          console.log(`[Chat] ✓ ID from parent localStorage: ${id}`);
+          return id;
+        }
+      } catch (err) {
+        console.log(`[Chat] Cannot access parent localStorage: ${err.message}`);
+      }
+    }
+    
     return null;
   }
 
@@ -3126,29 +3149,41 @@
 
   // Инициализация ID пользователя
   async function initializeUserId() {
+    console.log('[Chat] Starting user ID initialization...');
+    
     // 1. Пытаемся получить ID из родительского окна (если загружено через iframe)
+    console.log('[Chat] Step 1: Checking parent window...');
     let id = await fetchIdFromParent();
-    
-    // 2. Если не получилось, пытаемся из localStorage/sessionStorage
-    if (!id) {
-      id = getIdFromLocalStorage();
-    }
-    
-    // 3. Если еще не получилось, запрашиваем через API
-    if (!id) {
-      id = await fetchIdFromAPI();
-    }
-    
-    // 4. Обновляем глобальную переменную
     if (id) {
       myId = id;
       STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
-      console.log(`[Chat] Initialized myId: ${myId}`);
+      console.log(`[Chat] ✓ User ID initialized from parent window: ${myId}`);
       return true;
-    } else {
-      console.warn('[Chat] Could not determine user ID');
-      return false;
     }
+    
+    // 2. Если не получилось, пытаемся из localStorage/sessionStorage
+    console.log('[Chat] Step 2: Checking local/parent localStorage...');
+    id = getIdFromLocalStorage();
+    if (id) {
+      myId = id;
+      STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+      console.log(`[Chat] ✓ User ID initialized from localStorage: ${myId}`);
+      return true;
+    }
+    
+    // 3. Если еще не получилось, запрашиваем через API
+    console.log('[Chat] Step 3: Fetching from API /api/auth/me...');
+    id = await fetchIdFromAPI();
+    if (id) {
+      myId = id;
+      STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+      console.log(`[Chat] ✓ User ID initialized from API: ${myId}`);
+      return true;
+    }
+    
+    // 4. Не получилось ни одним способом
+    console.error('[Chat] ✗ Could not determine user ID after trying all methods');
+    return false;
   }
 
   // Отображение ID пользователя (или сообщения об ошибке)
@@ -3174,12 +3209,8 @@
   const myIdBadgeEl = document.getElementById('myIdBadge');
   
   // Запуск инициализации при загрузке, но не блокируем интерфейс
-  displayUserIdBadge().then(success => {
-    if (!success) {
-      console.error('[Chat] Failed to initialize user ID');
-      // Even if initialization failed, continue with other features
-    }
-  });
+  // Запуск инициализации происходит ПОЗЖЕ, после определения всех функций
+  // displayUserIdBadge().then(...) находится ниже
 
   const onlineUsers = [
     { id: 'ALL', label: 'Общий зал', avatar: '🏡', online: true, strictNoSave: false }
@@ -3394,7 +3425,27 @@
   }
   
   // Запускаем периодическое обновление присутствия и онлайн-списка ПОСЛЕ загрузки ID
-  displayUserIdBadge().then(() => {
+  displayUserIdBadge().then(success => {
+    if (!success) {
+      // Даже если инициализация не удалась, продолжаем попытки
+      console.warn('[Chat] User ID initialization failed, will retry');
+      // Запускаем попытку загрузить ID через API каждые 10 секунд
+      window.setInterval(async () => {
+        const result = await fetchIdFromAPI();
+        if (result && !myId) {
+          myId = result;
+          STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+          const badge = document.getElementById('myIdBadge');
+          if (badge) badge.textContent = `Ваш ID: ${myId}`;
+          console.log(`[Chat] Successfully loaded ID on retry: ${myId}`);
+        }
+      }, 10000);
+      return;
+    }
+    
+    // ID загружен успешно, запускаем мониторинг
+    console.log('[Chat] User ID loaded successfully, starting presence monitoring');
+    
     // Сразу отправляем первый heartbeat
     sendPresenceHeartbeat();
     
@@ -4372,38 +4423,7 @@
   }
 
   // ===== ИНИЦИАЛИЗАЦИЯ ПОЛУЧЕНИЯ ID И ПРИСУТСТВИЯ =====
-  
-  // Функция для инициализации ID из родительского окна или локального хранилища
-  async function initializeChatSession() {
-    // Попытаемся получить ID из родительского окна (если загружено через iframe)
-    const parentId = await fetchIdFromParent();
-    if (parentId) {
-      myId = parentId;
-      STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
-      const myIdBadgeEl = document.getElementById('myIdBadge');
-      if (myIdBadgeEl) {
-        myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
-      }
-      console.log(`[Chat] ID loaded from parent window: ${myId}`);
-      // Сразу загружаем онлайн-пользователей
-      refreshOnlineUsers();
-      return;
-    }
-    
-    // Если не удалось получить из родителя, пытаемся получить из собственного хранилища
-    if (updateMyId()) {
-      refreshOnlineUsers();
-      return;
-    }
-    
-    // Если ID еще не загружен, ждем обновления
-    console.log('[Chat] Waiting for ID to load from auth.js...');
-  }
-  
-  // Запускаем инициализацию сразу
-  initializeChatSession();
-
-  // ===== КОНЕЦ СИСТЕМЫ БЛОКИРОВОК =====
+  // Единственная точка инициализации - displayUserIdBadge() ниже
 
 </script>
 

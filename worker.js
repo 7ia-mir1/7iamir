@@ -102,7 +102,7 @@ function boundedLimit(value, fallback = 50) {
 
 const SESSION_COOKIE_NAME = "gornitsa_session";
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const PRESENCE_TTL_SECONDS = 180;
+const PRESENCE_TTL_SECONDS = 300; // 5 minutes - users appear online for this duration after last activity
 const PASSWORD_HASH_ITERATIONS = 100000;
 const RESET_CODE_TTL_SECONDS = 10 * 60;
 const RESET_CODE_COOLDOWN_SECONDS = 60;
