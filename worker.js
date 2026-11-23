@@ -468,12 +468,26 @@ async function handlePresence(request, env, session) {
   }
 
   const now = Math.floor(Date.now() / 1000);
+  
+  // Ensure online_presence table exists
+  try {
+    await env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS online_presence (
+        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        last_seen_at INTEGER NOT NULL
+      )`
+    ).run();
+  } catch (err) {
+    console.error("Error creating online_presence table:", err);
+  }
+  
   if (request.method === "POST") {
     try {
       await env.DB.prepare(
         `INSERT INTO online_presence (user_id, last_seen_at) VALUES (?, ?)
          ON CONFLICT(user_id) DO UPDATE SET last_seen_at = excluded.last_seen_at`,
       ).bind(session.id, now).run();
+      console.log(`[Presence] User ${session.id} heartbeat recorded at ${now}`);
     } catch (err) {
       console.error("Error updating online_presence:", err);
     }
@@ -502,6 +516,7 @@ async function handlePresence(request, env, session) {
       online: true,
     }));
 
+    console.log(`[Presence] Returning ${users.length} online users to ${session.id}`);
     return jsonResponse({
       users,
       online_count: users.length + 1,

@@ -33,6 +33,7 @@
         body: "{}",
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      console.log("[Auth] Presence heartbeat sent successfully");
       lastPresenceHeartbeatErrorAt = 0;
     } catch (error) {
       if (Date.now() - lastPresenceHeartbeatErrorAt > 30000) {
@@ -65,6 +66,7 @@
     if (!user || typeof user.id !== "string") {
       throw new Error("Сервер вернул некорректные данные пользователя.");
     }
+    console.log(`[Auth] User session loaded: ID=${user.id}, role=${user.role}`);
     if (isAdminPage && user.role !== "admin") {
       location.replace("/index.html");
       return null;
@@ -75,6 +77,7 @@
 
     localStorage.setItem(USER_ID_KEY, user.id);
     sessionStorage.setItem("7ia_my_id", user.id);
+    console.log(`[Auth] User ID stored in storage: ${user.id}`);
 
     if (isIndexPage) {
       const isAdmin = user.role === "admin";

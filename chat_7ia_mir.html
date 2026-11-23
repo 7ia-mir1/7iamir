@@ -3082,6 +3082,7 @@
         myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
       }
       console.log(`Chat: MyID updated to ${myId}`);
+      // Refresh will be called by setInterval
       return true;
     }
     return false;
@@ -3250,12 +3251,14 @@
     if (presenceLoadInProgress) return;
     presenceLoadInProgress = true;
     try {
+      console.log(`[Chat] Fetching online users (myId=${myId})`);
       const response = await fetch(PRESENCE_API_URL, {
         credentials: 'same-origin',
         cache: 'no-store',
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
+      console.log(`[Chat] Presence API returned:`, result);
       if (!Array.isArray(result.users)) throw new Error('Некорректный ответ API присутствия');
 
       const contacts = result.users
@@ -3274,14 +3277,17 @@
           online: user.online,
           strictNoSave: false
         }));
+      console.log(`[Chat] Filtered contacts:`, contacts);
       onlineUsers.splice(0, onlineUsers.length, onlineUsers[0], ...contacts);
       renderOnlineList();
       updateRoomHeader();
       lastPresenceErrorAt = 0;
     } catch (error) {
       const onlineCountLabel = document.getElementById('onlineCountLabel');
-      onlineCountLabel.textContent = 'Нет связи с сервером';
-      onlineCountLabel.title = error.message;
+      if (onlineCountLabel) {
+        onlineCountLabel.textContent = 'Нет связи с сервером';
+        onlineCountLabel.title = error.message;
+      }
       if (Date.now() - lastPresenceErrorAt > 30000) {
         console.error('Не удалось обновить список пользователей онлайн:', error);
         lastPresenceErrorAt = Date.now();
@@ -3292,16 +3298,12 @@
   }
 
   renderOnlineList();
-  refreshOnlineUsers();
   window.setInterval(refreshOnlineUsers, 15000);
 
-  // Периодически проверяем, загружен ли myId из auth.js
-  let idCheckCount = 0;
   const idCheckInterval = window.setInterval(() => {
     if (updateMyId()) {
-      idCheckCount = 0;  // Reset on success
-    } else if (++idCheckCount > 100) {
-      clearInterval(idCheckInterval);  // Stop checking after 10 seconds
+      clearInterval(idCheckInterval);
+      refreshOnlineUsers();
     }
   }, 100);
 
