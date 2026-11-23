@@ -3218,7 +3218,6 @@
       }
     } catch (error) {
       console.error('[Chat] ✗ displayUserIdBadge exception:', error);
-      const myIdBadgeEl = document.getElementById('myIdBadge');
       if (myIdBadgeEl) {
         myIdBadgeEl.textContent = `Ошибка: ${error.message}`;
         myIdBadgeEl.style.color = '#dc2626';
@@ -3373,12 +3372,10 @@
       currentRoomTitleEl.textContent = `Личный чат с ID ${selectedTargetId}`;
       isSupremeChatSelected = false;
     }
-    const supremeChatBtn = document.getElementById('supremeChatBtn');
     if (supremeChatBtn) {
       supremeChatBtn.classList.toggle('active', selectedTargetId === '1003');
       supremeChatBtn.setAttribute('aria-pressed', String(selectedTargetId === '1003'));
     }
-    const policeBtn = document.getElementById('policeBtn');
     if (policeBtn) {
       policeBtn.classList.toggle('active', selectedTargetId === '1002');
       policeBtn.setAttribute('aria-pressed', String(selectedTargetId === '1002'));
@@ -3534,7 +3531,6 @@
   // Функция инициализации кнопки "Чат с Верховным" с правильным ID
   function initializeSupremeButton() {
     try {
-      const supremeChatBtn = document.getElementById('supremeChatBtn');
       if (supremeChatBtn) {
         supremeChatBtn.disabled = myId === '1003';
         supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
@@ -4506,6 +4502,7 @@
     blocksBtn.addEventListener('click', openBlocksModal);
   }
 
+  const supremeChatBtn = document.getElementById('supremeChatBtn');
   // supremeChatBtn обработчик добавляется в initializeSupremeButton()
   // которая вызывается в displayUserIdBadge().then() после успешной загрузки ID
 

@@ -2816,6 +2816,7 @@
   const currentRoomTitleEl = document.getElementById('currentRoomTitle');
   const privacyStatusPillEl = document.getElementById('privacyStatusPill');
   const bottomSystemNoticeEl = document.getElementById('bottomSystemNotice');
+  const onlineCountLabel = document.getElementById('onlineCountLabel');
 
   function renderOnlineList() {
     onlineListEl.innerHTML = '';
@@ -2843,7 +2844,6 @@
       onlineListEl.appendChild(item);
     });
 
-    const onlineCountLabel = document.getElementById('onlineCountLabel');
     onlineCountLabel.title = '';
     onlineCountLabel.textContent =
       `Анонимная связь. В сети: ${1 + onlineUsers.filter(user => user.id !== 'ALL' && user.online).length} ID`;
@@ -2923,7 +2923,6 @@
       updateRoomHeader();
       lastPresenceErrorAt = 0;
     } catch (error) {
-      const onlineCountLabel = document.getElementById('onlineCountLabel');
       onlineCountLabel.textContent = 'Нет связи с сервером';
       onlineCountLabel.title = error.message;
       if (Date.now() - lastPresenceErrorAt > 30000) {
