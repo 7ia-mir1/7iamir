@@ -3193,29 +3193,39 @@
 
   // Отображение ID пользователя (или сообщения об ошибке)
   async function displayUserIdBadge() {
-    const myIdBadgeEl = document.getElementById('myIdBadge');
-    if (!myIdBadgeEl) return;
-    
-    myIdBadgeEl.textContent = 'Ваш ID: загрузка...';
-    
-    const result = await initializeUserId();
-    
-    if (result.success) {
-      myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
-      myIdBadgeEl.style.color = '';
-      return true;
-    } else {
-      myIdBadgeEl.textContent = result.error || 'Войдите в аккаунт';
-      myIdBadgeEl.style.color = '#dc2626';
+    try {
+      const myIdBadgeEl = document.getElementById('myIdBadge');
+      if (!myIdBadgeEl) {
+        console.error('[Chat] ✗ DOM element #myIdBadge not found');
+        return false;
+      }
+      
+      myIdBadgeEl.textContent = 'Ваш ID: загрузка...';
+      
+      const result = await initializeUserId();
+      
+      if (result.success) {
+        myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
+        myIdBadgeEl.style.color = '';
+        console.log(`[Chat] ✓ displayUserIdBadge completed successfully: ${myId}`);
+        return true;
+      } else {
+        const errorMsg = result.error || 'Войдите в аккаунт';
+        myIdBadgeEl.textContent = errorMsg;
+        myIdBadgeEl.style.color = '#dc2626';
+        console.error(`[Chat] ✗ displayUserIdBadge failed: ${errorMsg}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[Chat] ✗ displayUserIdBadge exception:', error);
+      const myIdBadgeEl = document.getElementById('myIdBadge');
+      if (myIdBadgeEl) {
+        myIdBadgeEl.textContent = `Ошибка: ${error.message}`;
+        myIdBadgeEl.style.color = '#dc2626';
+      }
       return false;
     }
   }
-
-  const myIdBadgeEl = document.getElementById('myIdBadge');
-  
-  // Запуск инициализации при загрузке, но не блокируем интерфейс
-  // Запуск инициализации происходит ПОЗЖЕ, после определения всех функций
-  // displayUserIdBadge().then(...) находится ниже
 
   const onlineUsers = [
     { id: 'ALL', label: 'Общий зал', avatar: '🏡', online: true, strictNoSave: false }
@@ -3255,17 +3265,42 @@
   /********************************************************************
    * 1. РЕНДЕР СПИСКА ОНЛАЙН ID С ОТЧЁТЛИВЫМ ВЫДЕЛЕНИЕМ АКТИВНОГО ЧАТА
    ********************************************************************/
-  const onlineListEl = document.getElementById('onlineList');
-  const currentRoomTitleEl = document.getElementById('currentRoomTitle');
-  const privacyStatusPillEl = document.getElementById('privacyStatusPill');
-  const bottomSystemNoticeEl = document.getElementById('bottomSystemNotice');
+  let onlineListEl, currentRoomTitleEl, privacyStatusPillEl, bottomSystemNoticeEl;
+  
+  try {
+    onlineListEl = document.getElementById('onlineList');
+    currentRoomTitleEl = document.getElementById('currentRoomTitle');
+    privacyStatusPillEl = document.getElementById('privacyStatusPill');
+    bottomSystemNoticeEl = document.getElementById('bottomSystemNotice');
 
-  if (!onlineListEl || !currentRoomTitleEl || !privacyStatusPillEl || !bottomSystemNoticeEl) {
-    console.error('Critical DOM elements not found. Chat cannot initialize.');
-    throw new Error('Missing required DOM elements for chat initialization');
+    if (!onlineListEl) {
+      console.error('[Chat] ✗ DOM element #onlineList not found');
+    }
+    if (!currentRoomTitleEl) {
+      console.error('[Chat] ✗ DOM element #currentRoomTitle not found');
+    }
+    if (!privacyStatusPillEl) {
+      console.error('[Chat] ✗ DOM element #privacyStatusPill not found');
+    }
+    if (!bottomSystemNoticeEl) {
+      console.error('[Chat] ✗ DOM element #bottomSystemNotice not found');
+    }
+
+    if (!onlineListEl || !currentRoomTitleEl || !privacyStatusPillEl || !bottomSystemNoticeEl) {
+      console.error('[Chat] ✗ Critical DOM elements not found. Chat cannot initialize.');
+      throw new Error('Missing required DOM elements for chat initialization');
+    }
+  } catch (error) {
+    console.error('[Chat] ✗ Exception during DOM initialization:', error);
+    throw error;
   }
 
   function renderOnlineList() {
+    if (!onlineListEl) {
+      console.warn('[Chat] ✗ renderOnlineList: onlineListEl is not available');
+      return;
+    }
+    
     onlineListEl.innerHTML = '';
 
     onlineUsers.forEach(u => {
@@ -3317,14 +3352,15 @@
     renderMessages({ forceScrollBottom: true });
   }
 
-  const supremeChatBtn = document.getElementById('supremeChatBtn');
-  if (supremeChatBtn) {
-    supremeChatBtn.disabled = myId === '1003';
-    supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
-    supremeChatBtn.addEventListener('click', () => openDirectChat('1003', true));
-  }
+  // Инициализация кнопок с проверкой ID будет выполнена в displayUserIdBadge().then()
+  // Это не должно выполняться ДО инициализации myId!
 
   function updateRoomHeader() {
+    if (!currentRoomTitleEl) {
+      console.warn('[Chat] ✗ updateRoomHeader: currentRoomTitleEl is not available');
+      return;
+    }
+    
     if (selectedTargetId === 'ALL') {
       currentRoomTitleEl.textContent = 'Общий зал';
     } else if (selectedTargetId === '1003') {
@@ -3464,6 +3500,10 @@
           const badge = document.getElementById('myIdBadge');
           if (badge) badge.textContent = `Ваш ID: ${myId}`;
           console.log(`[Chat] Successfully loaded ID on retry: ${myId}`);
+          // Инициализируем кнопки при успешной загрузке ID
+          initializeSupremeButton();
+          // Загружаем список блокировок
+          initializeBlockedUsersAndRender();
         }
       }, 10000);
       return;
@@ -3471,6 +3511,12 @@
     
     // ID загружен успешно, запускаем мониторинг
     console.log('[Chat] User ID loaded successfully, starting presence monitoring');
+    
+    // Инициализируем кнопку "Чат с Верховным" с правильным ID
+    initializeSupremeButton();
+    
+    // Загружаем список блокировок и рендерим список онлайна
+    initializeBlockedUsersAndRender();
     
     // Сразу отправляем первый heartbeat
     sendPresenceHeartbeat();
@@ -3484,6 +3530,39 @@
     
     console.log('[Chat] Presence monitoring started');
   });
+
+  // Функция инициализации кнопки "Чат с Верховным" с правильным ID
+  function initializeSupremeButton() {
+    try {
+      const supremeChatBtn = document.getElementById('supremeChatBtn');
+      if (supremeChatBtn) {
+        supremeChatBtn.disabled = myId === '1003';
+        supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
+        // Удаляем старые обработчики, если они были
+        const newBtn = supremeChatBtn.cloneNode(true);
+        supremeChatBtn.parentNode.replaceChild(newBtn, supremeChatBtn);
+        newBtn.addEventListener('click', () => openDirectChat('1003', true));
+        console.log(`[Chat] ✓ initializeSupremeButton: supremeChatBtn is ready (myId=${myId})`);
+      } else {
+        console.warn('[Chat] ✗ initializeSupremeButton: supremeChatBtn not found');
+      }
+    } catch (error) {
+      console.error('[Chat] ✗ initializeSupremeButton error:', error);
+    }
+  }
+
+  // Функция загрузки блокировок и рендеринга списка онлайна
+  async function initializeBlockedUsersAndRender() {
+    try {
+      console.log('[Chat] Loading blocked users and rendering online list...');
+      await loadBlockedUsers();
+      renderOnlineList();
+      console.log('[Chat] ✓ Blocked users loaded and online list rendered');
+    } catch (e) {
+      console.error('[Chat] ✗ Error loading blocked users:', e);
+      renderOnlineList();
+    }
+  }
 
   /********************************************************************
    * 2, 3. ЛОГИКА ОПЦИЙ СОХРАНЕНИЯ И ЧЁРНО-ЖЁЛТАЯ ПЛАШКА ПОД ЧАТОМ
@@ -3752,6 +3831,11 @@
   }
 
   function renderMessages(options = {}) {
+    if (!messagesAreaEl) {
+      console.warn('[Chat] ✗ renderMessages: messagesAreaEl is not available');
+      return;
+    }
+    
     const { forceScrollBottom = false } = options;
     const wasNearBottom = isScrolledNearBottom();
     const previousScrollTop = messagesAreaEl.scrollTop;
@@ -4403,13 +4487,9 @@
     }
   }
 
-  // Загрузим список блокировок при запуске
-  loadBlockedUsers().then(() => {
-    renderOnlineList();
-  }).catch(e => {
-    console.error('Ошибка при загрузке блокировок:', e);
-    renderOnlineList();
-  });
+  // Загрузка блокировок теперь выполняется в initializeBlockedUsersAndRender()
+  // которая вызывается в displayUserIdBadge().then() после успешной загрузки ID
+  
   const generalChatBtn = document.getElementById('generalChatBtn');
   if (generalChatBtn) {
     generalChatBtn.addEventListener('click', () => {
@@ -4426,16 +4506,8 @@
     blocksBtn.addEventListener('click', openBlocksModal);
   }
 
-  const supremeChatBtn = document.getElementById('supremeChatBtn');
-  if (supremeChatBtn) {
-    supremeChatBtn.addEventListener('click', () => {
-      selectedTargetId = '1003';
-      isSupremeChatSelected = true;
-      renderOnlineList();
-      updateRoomHeader();
-      renderMessages({ forceScrollBottom: true });
-    });
-  }
+  // supremeChatBtn обработчик добавляется в initializeSupremeButton()
+  // которая вызывается в displayUserIdBadge().then() после успешной загрузки ID
 
   const policeBtn = document.getElementById('policeBtn');
   if (policeBtn) {
