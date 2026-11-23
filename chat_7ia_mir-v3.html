@@ -2764,6 +2764,9 @@
   </div>
 </div>
 
+<!-- ВАЖНО: auth.js должен загружаться ПЕРЕД основным скриптом чата -->
+<script src="auth.js"></script>
+
 <script>
   /********************************************************************
    * КОНФИГУРАЦИЯ И ОНЛАЙН ID
@@ -3660,6 +3663,6 @@
   loadMessagesFromServer();
   setInterval(loadMessagesFromServer, 3000);
 </script>
-    <script src="auth.js"></script>
+
 </body>
 </html>
