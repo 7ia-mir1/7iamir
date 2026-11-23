@@ -21,6 +21,9 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at
 CREATE INDEX IF NOT EXISTS idx_chat_messages_expires_at
     ON chat_messages (expires_at);
 
+CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_target
+    ON chat_messages (sender_id, target_id);
+
 CREATE TABLE IF NOT EXISTS media_items (
     id TEXT PRIMARY KEY,
     category TEXT NOT NULL,
@@ -56,6 +59,9 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
 
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id
     ON auth_sessions (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at
+    ON auth_sessions (expires_at);
 
 CREATE TABLE IF NOT EXISTS online_presence (
     user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

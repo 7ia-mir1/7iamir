@@ -420,6 +420,10 @@ async function handleAuth(request, env, pathname) {
 
 const MAX_YAGA_HISTORY_MESSAGES = 36;
 const MAX_YAGA_HISTORY_CHARS = 32000;
+const MAX_CHAT_IMAGE_BYTES = 350 * 1024;
+const D1_FREE_STORAGE_LIMIT_BYTES = 500_000_000;
+const D1_STORAGE_WARNING_BYTES = 400_000_000;
+const CHAT_DUMP_PAGE_SIZE = 250;
 
 async function handlePresence(request, env, session) {
   if (request.method !== "GET" && request.method !== "POST") {
@@ -462,6 +466,28 @@ async function handlePresence(request, env, session) {
   });
 }
 
+function isSafeChatFileUrl(value, baseUrl) {
+  if (typeof value !== "string" || !value) return false;
+  try {
+    const url = new URL(value, baseUrl);
+    return ["http:", "https:"].includes(url.protocol) &&
+      !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+function parseChatDataUrl(value) {
+  if (typeof value !== "string") return null;
+  const match = /^data:([\w.+-]+\/[\w.+-]+);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+  if (!match) return null;
+  try {
+    return { mimeType: match[1].toLowerCase(), byteLength: atob(match[2]).length };
+  } catch {
+    return null;
+  }
+}
+
 async function handleChat(request, env, session) {
   if (request.method === "GET") {
     const now = Math.floor(Date.now() / 1000);
@@ -483,7 +509,10 @@ async function handleChat(request, env, session) {
     ).bind(userId, userId, limit + 1).all();
 
     const hasMore = result.results.length > limit;
-    const messages = result.results.slice(0, limit).reverse();
+    const messages = result.results.slice(0, limit).reverse().map(message => ({
+      ...message,
+      file_url: isSafeChatFileUrl(message.file_url, request.url) ? message.file_url : null,
+    }));
     return jsonResponse({ messages, has_more: hasMore });
   }
 
@@ -517,7 +546,6 @@ async function handleChat(request, env, session) {
     const fileUrl = typeof body.file_url === "string" ? body.file_url.trim() : null;
     const fileName = typeof body.file_name === "string" ? body.file_name.trim() : null;
     const imageDataUrl = typeof body.image_data_url === "string" ? body.image_data_url : null;
-    const imageSizeKb = Number.isInteger(body.image_size_kb) ? body.image_size_kb : null;
     const fileDataUrl = typeof body.file_data_url === "string" ? body.file_data_url : null;
     const fileSizeFormatted = typeof body.file_size_formatted === "string"
       ? body.file_size_formatted.trim()
@@ -528,8 +556,6 @@ async function handleChat(request, env, session) {
       : ["off", "me", "both"].includes(body.delete_scope)
         ? body.delete_scope
         : "off";
-    const validDataUrl = value =>
-      value === null || /^data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]+$/.test(value);
     const payloadBytes = new TextEncoder().encode(
       `${text}${imageDataUrl || ""}${fileDataUrl || ""}${fileName || ""}${fileSizeFormatted || ""}`,
     ).byteLength;
@@ -537,13 +563,37 @@ async function handleChat(request, env, session) {
     if (payloadBytes > 1800000) {
       return errorResponse("Вложение превышает лимит хранения в D1.", 413);
     }
+    if (fileUrl && !isSafeChatFileUrl(fileUrl, request.url)) {
+      return errorResponse("Ссылка на вложение должна использовать HTTP или HTTPS.");
+    }
+
+    const imageInfo = imageDataUrl ? parseChatDataUrl(imageDataUrl) : null;
+    const fileInfo = fileDataUrl ? parseChatDataUrl(fileDataUrl) : null;
+    const allowedImageTypes = new Set([
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/avif",
+    ]);
+    const allowedFileTypes = /^(?:image\/(?:jpeg|png|webp|gif|avif)|audio\/[\w.+-]+|video\/[\w.+-]+|application\/(?:pdf|octet-stream|zip)|text\/plain)$/;
+    const imageDataValid = imageDataUrl === null ||
+      Boolean(imageInfo && allowedImageTypes.has(imageInfo.mimeType));
+    const fileDataValid = fileDataUrl === null ||
+      Boolean(fileInfo && allowedFileTypes.test(fileInfo.mimeType));
+    if ((imageInfo && imageInfo.byteLength > MAX_CHAT_IMAGE_BYTES) ||
+        (fileInfo && fileInfo.mimeType.startsWith("image/") &&
+          fileInfo.byteLength > MAX_CHAT_IMAGE_BYTES)) {
+      return errorResponse("Изображение превышает серверный лимит 350 КБ.", 413);
+    }
+    const imageSizeKb = imageInfo ? Math.ceil(imageInfo.byteLength / 1024) : null;
+
     if (!/^\d{1,10}$/.test(senderId) ||
         !(targetId === "ALL" || /^\d{1,10}$/.test(targetId)) ||
         text.length > 10000 || (fileUrl && fileUrl.length > 2048) ||
         (fileName && fileName.length > 255) ||
         (fileSizeFormatted && fileSizeFormatted.length > 50) ||
-        (imageSizeKb !== null && (imageSizeKb < 0 || imageSizeKb > 2000)) ||
-        !validDataUrl(imageDataUrl) || !validDataUrl(fileDataUrl) ||
+        !imageDataValid || !fileDataValid ||
         (!text && !fileUrl && !imageDataUrl && !fileDataUrl)) {
       return errorResponse("Некорректные данные сообщения.");
     }
@@ -1058,6 +1108,234 @@ async function handleAdminContent(request, env) {
   return errorResponse("Метод не поддерживается.", 405);
 }
 
+function quoteSqlIdentifier(value) {
+  return `"${String(value).replace(/"/g, '""')}"`;
+}
+
+function sqlLiteral(value) {
+  if (value === null) return "NULL";
+  if (typeof value === "string") return `'${value.replace(/'/g, "''")}'`;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error("Cannot export a non-finite SQL number.");
+    return String(value);
+  }
+  if (typeof value === "bigint") return value.toString();
+  if (value instanceof ArrayBuffer) {
+    return `X'${Array.from(new Uint8Array(value), byte => byte.toString(16).padStart(2, "0")).join("")}'`;
+  }
+  if (ArrayBuffer.isView(value)) {
+    const bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+    return `X'${Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("")}'`;
+  }
+  if (value === undefined) throw new Error("Cannot export an undefined SQL value.");
+  throw new Error(`Unsupported SQL export value type: ${typeof value}`);
+}
+
+async function* createSqlDump(env, tables) {
+  yield "-- 7iamir Cloudflare D1 backup\n";
+  yield "PRAGMA foreign_keys=OFF;\nBEGIN TRANSACTION;\n";
+
+  for (const table of tables) {
+    const tableName = String(table.name);
+    if (typeof table.sql !== "string") continue;
+    const createSql = table.sql.replace(
+      /^\s*CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?/i,
+      "CREATE TABLE IF NOT EXISTS ",
+    );
+    if (!/^CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+/i.test(createSql)) {
+      throw new Error(`Unsupported table definition for ${tableName}.`);
+    }
+
+    yield `\n${createSql};\n`;
+    const pragmaResult = await env.DB.prepare(
+      `PRAGMA table_info(${quoteSqlIdentifier(tableName)})`,
+    ).all();
+    const columns = pragmaResult.results.map(column => String(column.name));
+    if (!columns.length) throw new Error(`No columns found for ${tableName}.`);
+
+    const columnList = columns.map(quoteSqlIdentifier).join(", ");
+    const query = `SELECT * FROM ${quoteSqlIdentifier(tableName)} LIMIT ? OFFSET ?`;
+    let offset = 0;
+    while (true) {
+      const page = await env.DB.prepare(query)
+        .bind(CHAT_DUMP_PAGE_SIZE, offset)
+        .all();
+      const rows = page.results || [];
+      if (!rows.length) break;
+
+      const insertLines = rows.map(row => {
+        const values = columns.map(column => sqlLiteral(row[column])).join(", ");
+        return `INSERT INTO ${quoteSqlIdentifier(tableName)} (${columnList}) VALUES (${values});`;
+      });
+      yield `${insertLines.join("\n")}\n`;
+      offset += rows.length;
+      if (rows.length < CHAT_DUMP_PAGE_SIZE) break;
+    }
+  }
+
+  const indexes = await env.DB.prepare(
+    `SELECT sql FROM sqlite_master
+     WHERE type = 'index' AND sql IS NOT NULL
+       AND substr(name, 1, 7) <> 'sqlite_'
+       AND substr(name, 1, 4) <> '_cf_'
+     ORDER BY name`,
+  ).all();
+  for (const index of indexes.results) {
+    const indexSql = index.sql.replace(
+      /^\s*CREATE\s+(UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?/i,
+      (_, unique = "") => `CREATE ${unique}INDEX IF NOT EXISTS `,
+    );
+    yield `${indexSql};\n`;
+  }
+
+  yield "COMMIT;\nPRAGMA foreign_keys=ON;\n";
+}
+
+async function handleAdminDatabaseExport(request, env) {
+  if (request.method !== "GET") {
+    return errorResponse("Метод не поддерживается.", 405);
+  }
+
+  const result = await env.DB.prepare(
+    `SELECT name, sql FROM sqlite_master
+     WHERE type = 'table'
+       AND substr(name, 1, 7) <> 'sqlite_'
+       AND substr(name, 1, 4) <> '_cf_'
+     ORDER BY name`,
+  ).all();
+  const tables = result.results || [];
+  const encoder = new TextEncoder();
+  const iterator = createSqlDump(env, tables)[Symbol.asyncIterator]();
+  const body = new ReadableStream({
+    async pull(controller) {
+      try {
+        const chunk = await iterator.next();
+        if (chunk.done) controller.close();
+        else controller.enqueue(encoder.encode(chunk.value));
+      } catch (error) {
+        console.error("Не удалось сформировать SQL-резервную копию D1.", error);
+        controller.error(error);
+      }
+    },
+    async cancel() {
+      if (typeof iterator.return === "function") await iterator.return();
+    },
+  });
+  const date = new Date().toISOString().slice(0, 10);
+  return new Response(body, {
+    headers: {
+      "content-type": "application/sql; charset=utf-8",
+      "content-disposition": `attachment; filename="7iamir-db-backup-${date}.sql"`,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+function normalizeSql(sql) {
+  return sql.toLowerCase()
+    .replace(/\bif\s+not\s+exists\b/g, "")
+    .replace(/[`"\[\]\s]/g, "");
+}
+
+async function handleAdminSystemHealth(request, env) {
+  if (request.method !== "GET") {
+    return errorResponse("Метод не поддерживается.", 405);
+  }
+
+  const tableResult = await env.DB.prepare(
+    `SELECT name FROM sqlite_master
+     WHERE type = 'table'
+       AND substr(name, 1, 7) <> 'sqlite_'
+       AND substr(name, 1, 4) <> '_cf_'`,
+  ).all();
+  const tableNames = new Set((tableResult.results || []).map(table => table.name));
+  const rowCounts = {};
+  for (const name of ["users", "auth_sessions", "chat_messages", "media_items"]) {
+    if (!tableNames.has(name)) {
+      rowCounts[name] = 0;
+      continue;
+    }
+    const countResult = await env.DB.prepare(
+      `SELECT COUNT(*) AS count FROM ${quoteSqlIdentifier(name)}`,
+    ).first();
+    rowCounts[name] = Number(countResult && countResult.count) || 0;
+  }
+
+  let databaseSizeBytes = null;
+  let databaseSizeError = null;
+  try {
+    const pageCountRow = await env.DB.prepare("PRAGMA page_count;").first();
+    const pageSizeRow = await env.DB.prepare("PRAGMA page_size;").first();
+    const pageCount = Number(pageCountRow && pageCountRow.page_count);
+    const pageSize = Number(pageSizeRow && pageSizeRow.page_size);
+    if (!Number.isSafeInteger(pageCount) || pageCount < 0 ||
+        !Number.isSafeInteger(pageSize) || pageSize <= 0) {
+      throw new Error("D1 returned invalid page metrics.");
+    }
+    databaseSizeBytes = pageCount * pageSize;
+  } catch (error) {
+    console.error("Не удалось получить размер D1 через PRAGMA.", error);
+    databaseSizeError = "PRAGMA page_count/page_size недоступны.";
+  }
+
+  const indexResult = await env.DB.prepare(
+    `SELECT name, sql FROM sqlite_master
+     WHERE type = 'index'
+       AND name IN (?, ?, ?)`,
+  ).bind(
+    "idx_chat_messages_created_at",
+    "idx_chat_messages_sender_target",
+    "idx_auth_sessions_expires_at",
+  ).all();
+  const indexes = new Map((indexResult.results || [])
+    .map(index => [index.name, normalizeSql(index.sql || "")]));
+  const indexStatus = {
+    chatCreatedAt: indexes.get("idx_chat_messages_created_at") ===
+      "createindexidx_chat_messages_created_atonchat_messages(created_at)",
+    chatSenderTarget: indexes.get("idx_chat_messages_sender_target") ===
+      "createindexidx_chat_messages_sender_targetonchat_messages(sender_id,target_id)",
+    authSessionsExpires: indexes.get("idx_auth_sessions_expires_at") ===
+      "createindexidx_auth_sessions_expires_atauth_sessions(expires_at)",
+  };
+  const usagePercent = databaseSizeBytes === null
+    ? null
+    : Math.min(100, (databaseSizeBytes / D1_FREE_STORAGE_LIMIT_BYTES) * 100);
+
+  return jsonResponse({
+    database: "Cloudflare D1 (SQLite)",
+    storage: {
+      sizeBytes: databaseSizeBytes,
+      sizeMb: databaseSizeBytes === null ? null : databaseSizeBytes / 1_000_000,
+      freeLimitBytes: D1_FREE_STORAGE_LIMIT_BYTES,
+      warningLimitBytes: D1_STORAGE_WARNING_BYTES,
+      remainingBytes: databaseSizeBytes === null
+        ? null
+        : Math.max(0, D1_FREE_STORAGE_LIMIT_BYTES - databaseSizeBytes),
+      usagePercent,
+      warning: databaseSizeBytes !== null &&
+        databaseSizeBytes >= D1_STORAGE_WARNING_BYTES,
+      error: databaseSizeError,
+    },
+    tableCount: tableNames.size,
+    rowCounts,
+    dailyLimits: {
+      d1RowReads: 5_000_000,
+      d1RowWrites: 100_000,
+      workerRequests: 100_000,
+      usageAvailableFromWorker: false,
+    },
+    security: {
+      indexes: indexStatus,
+      chatImageMaxBytes: MAX_CHAT_IMAGE_BYTES,
+      siteImageMaxBytes: 262144,
+      loginAttemptsPerWindow: 10,
+      loginWindowSeconds: 900,
+      aiRateLimitConfigured: false,
+    },
+  });
+}
+
 function decodeImageDataUrl(dataUrl) {
   const match = /^data:(image\/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
   if (!match) return null;
@@ -1231,6 +1509,12 @@ export default {
         return errorResponse("Запрос с другого источника запрещён.", 403);
       }
 
+      if (pathname === "/api/admin/export-db") {
+        return await handleAdminDatabaseExport(request, env);
+      }
+      if (pathname === "/api/admin/system-health") {
+        return await handleAdminSystemHealth(request, env);
+      }
       if (pathname === "/api/presence") return await handlePresence(request, env, session);
       if (pathname === "/api/chat") return await handleChat(request, env, session);
       if (pathname === "/api/yaga-chat") return await handleYagaChat(request, env);

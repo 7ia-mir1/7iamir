@@ -3194,21 +3194,21 @@
     const wasNearBottom = isScrolledNearBottom();
     const previousScrollTop = messagesAreaEl.scrollTop;
 
-    messagesAreaEl.innerHTML = '';
+    messagesAreaEl.replaceChildren();
 
     const now = Date.now();
     const visibleMessages = messages.filter(m => {
       if (m.deletedForMe) return false;
-    const senderId = String(m.senderId);
-    const targetId = String(m.targetId);
-    if (selectedTargetId === 'ALL') return targetId === 'ALL';
-    return (senderId === selectedTargetId && targetId === myId) ||
-           (senderId === myId && targetId === selectedTargetId);
+      const senderId = String(m.senderId);
+      const targetId = String(m.targetId);
+      if (selectedTargetId === 'ALL') return targetId === 'ALL';
+      return (senderId === selectedTargetId && targetId === myId) ||
+             (senderId === myId && targetId === selectedTargetId);
     });
     visibleMessages.sort((a, b) => a.createdAt - b.createdAt);
 
     visibleMessages.forEach(msg => {
-      const isMine = msg.senderId === myId;
+      const isMine = String(msg.senderId) === myId;
       const row = document.createElement('div');
       row.className = 'message-row' + (isMine ? ' mine' : '');
       row.dataset.msgId = msg.id;
@@ -3218,40 +3218,84 @@
         remainingSec = Math.max(0, Math.ceil((msg.expiresAt - now) / 1000));
       }
 
-      let mediaHtml = '';
-      if (msg.imageDataUrl) {
-        mediaHtml += `
-          <img src="${escapeHtml(msg.imageDataUrl)}" class="msg-image" alt="Фото">
-          <span class="msg-meta-badge">Сжато автоматически: ${msg.imageSizeKb} КБ</span>
-        `;
-      }
-      if (msg.fileName) {
-        mediaHtml += `
-          <div>
-            <a href="${escapeHtml(msg.fileDataUrl || '#')}" download="${escapeHtml(msg.fileName)}" class="msg-file-card">
-              📎 ${escapeHtml(msg.fileName)} (${escapeHtml(msg.fileSizeFormatted || '')})
-            </a>
-          </div>
-        `;
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      const header = document.createElement('div');
+      header.className = 'msg-header';
+      const senderLabel = document.createElement('span');
+      senderLabel.className = 'msg-sender-id';
+      senderLabel.textContent = `ID ${msg.senderId}`;
+      const timeLabel = document.createElement('span');
+      timeLabel.textContent = String(msg.time || '');
+      header.append(senderLabel, timeLabel);
+      bubble.appendChild(header);
+
+      const text = document.createElement('div');
+      text.className = 'msg-text';
+      text.textContent = typeof msg.text === 'string' ? msg.text : '';
+      bubble.appendChild(text);
+
+      const imageSource = safeChatImageUrl(msg.imageDataUrl);
+      if (imageSource) {
+        const image = document.createElement('img');
+        image.src = imageSource;
+        image.className = 'msg-image';
+        image.alt = 'Фото';
+        bubble.appendChild(image);
+
+        const imageBadge = document.createElement('span');
+        imageBadge.className = 'msg-meta-badge';
+        imageBadge.textContent = `Сжато автоматически: ${Number(msg.imageSizeKb) || 0} КБ`;
+        bubble.appendChild(imageBadge);
       }
 
-      row.innerHTML = `
-        <div class="msg-bubble">
-          <div class="msg-header">
-            <span class="msg-sender-id">ID ${msg.senderId}</span>
-            <span>${msg.time}</span>
-          </div>
-          <div class="msg-text">${escapeHtml(msg.text || '')}</div>
-          ${mediaHtml}
-          <div class="msg-actions">
-            <span class="timer-countdown" data-timer-for="${msg.id}" style="${remainingSec !== null ? '' : 'display:none;'}">
-              ${remainingSec !== null ? `⏳ ${remainingSec} сек (${msg.deleteScope === 'both' ? 'у обоих' : 'у меня'})` : ''}
-            </span>
-            <button class="btn-delete-msg" onclick="deleteMessage('${msg.id}', 'me')" title="Стереть только у меня">Стереть у меня</button>
-            <button class="btn-delete-msg" onclick="deleteMessage('${msg.id}', 'both')" title="Стереть у себя и у собеседника">Стереть у обоих</button>
-          </div>
-        </div>
-      `;
+      if (msg.fileName) {
+        const fileContainer = document.createElement('div');
+        const fileLabel = `📎 ${String(msg.fileName)} (${String(msg.fileSizeFormatted || '')})`;
+        const fileUrl = safeChatFileUrl(msg.fileDataUrl);
+        if (fileUrl) {
+          const fileLink = document.createElement('a');
+          fileLink.href = fileUrl;
+          fileLink.download = String(msg.fileName);
+          fileLink.className = 'msg-file-card';
+          fileLink.rel = 'noopener noreferrer';
+          fileLink.textContent = fileLabel;
+          fileContainer.appendChild(fileLink);
+        } else {
+          fileContainer.textContent = fileLabel;
+        }
+        bubble.appendChild(fileContainer);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'msg-actions';
+      const timer = document.createElement('span');
+      timer.className = 'timer-countdown';
+      timer.dataset.timerFor = String(msg.id);
+      timer.style.display = remainingSec === null ? 'none' : '';
+      if (remainingSec !== null) {
+        timer.textContent = `⏳ ${remainingSec} сек (${msg.deleteScope === 'both' ? 'у обоих' : 'у меня'})`;
+      }
+      actions.appendChild(timer);
+
+      const deleteForMe = document.createElement('button');
+      deleteForMe.type = 'button';
+      deleteForMe.className = 'btn-delete-msg';
+      deleteForMe.title = 'Стереть только у меня';
+      deleteForMe.textContent = 'Стереть у меня';
+      deleteForMe.addEventListener('click', () => window.deleteMessage(msg.id, 'me'));
+      actions.appendChild(deleteForMe);
+
+      const deleteForBoth = document.createElement('button');
+      deleteForBoth.type = 'button';
+      deleteForBoth.className = 'btn-delete-msg';
+      deleteForBoth.title = 'Стереть у себя и у собеседника';
+      deleteForBoth.textContent = 'Стереть у обоих';
+      deleteForBoth.addEventListener('click', () => window.deleteMessage(msg.id, 'both'));
+      actions.appendChild(deleteForBoth);
+
+      bubble.appendChild(actions);
+      row.appendChild(bubble);
       messagesAreaEl.appendChild(row);
     });
 
@@ -3585,16 +3629,28 @@
     }
   });
 
-  function escapeHtml(str) {
-    return str.replace(/[&<>"']/g, function(m) {
-      return ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      })[m];
-    });
+  function safeChatImageUrl(value) {
+    return typeof value === 'string' &&
+      /^data:image\/(?:jpeg|png|webp|gif|avif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value)
+      ? value
+      : null;
+  }
+
+  function safeChatFileUrl(value) {
+    if (typeof value !== 'string' || !value) return null;
+    if (/^data:/i.test(value)) {
+      return /^data:(?:image\/(?:jpeg|png|webp|gif|avif)|audio\/[\w.+-]+|video\/[\w.+-]+|application\/(?:pdf|octet-stream|zip)|text\/plain);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value)
+        ? value
+        : null;
+    }
+    try {
+      const url = new URL(value, location.href);
+      return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+        ? url.href
+        : null;
+    } catch {
+      return null;
+    }
   }
 
   resetToUnlimitedMode();

@@ -222,6 +222,143 @@
         @media (max-width: 720px) {
             .pair-match-grid { grid-template-columns: 1fr; text-align: center; }
         }
+
+        .system-overview-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+            gap: 14px;
+            margin: 18px 0 14px;
+        }
+        .system-card {
+            min-width: 0;
+            padding: 16px;
+            border: 2px solid #8b5a2b;
+            border-radius: 12px;
+            background: rgba(255, 252, 242, 0.88);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+        .system-card h2 {
+            margin: 0 0 12px;
+            color: #5a1807;
+            font-size: 20px;
+        }
+        .system-facts,
+        .system-counts,
+        .quota-list {
+            display: grid;
+            gap: 8px;
+        }
+        .system-fact,
+        .system-count,
+        .quota-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(110, 65, 25, 0.2);
+        }
+        .system-fact span,
+        .system-count span,
+        .quota-row span {
+            color: #5a3818;
+        }
+        .storage-summary {
+            margin-top: 14px;
+            padding: 12px;
+            border: 1px solid #8b5a2b;
+            border-radius: 9px;
+            background: rgba(139, 90, 43, 0.08);
+        }
+        .health-meter {
+            position: relative;
+            height: 18px;
+            margin: 8px 0;
+            overflow: hidden;
+            border: 1px solid #6e4119;
+            border-radius: 20px;
+            background: #e1d0ae;
+        }
+        .health-meter-fill {
+            display: block;
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #2e7d32, #8bc34a);
+            transition: width 0.25s ease;
+        }
+        .health-meter-fill.warning { background: linear-gradient(90deg, #e0a000, #d84315); }
+        .health-warning-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 80%;
+            width: 2px;
+            background: #8b1e0b;
+        }
+        .health-status {
+            margin-top: 7px;
+            font-weight: bold;
+            color: #1b5e20;
+        }
+        .health-status.warning { color: #8b1e0b; }
+        .health-note {
+            margin: 7px 0 0;
+            color: #5a3818;
+            font-size: 12.5px;
+            line-height: 1.4;
+        }
+        .health-note.warning {
+            padding: 8px 10px;
+            border-left: 3px solid #b26a00;
+            background: rgba(255, 193, 7, 0.13);
+            color: #6a3b00;
+        }
+        .quota-list { margin-top: 12px; }
+        .security-list {
+            display: grid;
+            gap: 9px;
+        }
+        .security-item {
+            padding: 10px 11px;
+            border: 1px solid #2e7d32;
+            border-radius: 9px;
+            background: rgba(46, 125, 50, 0.08);
+        }
+        .security-item.warning {
+            border-color: #b26a00;
+            background: rgba(255, 193, 7, 0.13);
+        }
+        .security-item strong { color: #3d260f; }
+        .security-state {
+            display: inline-block;
+            margin-left: 6px;
+            color: #1b5e20;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .security-item.warning .security-state { color: #8b1e0b; }
+        .security-detail {
+            margin: 5px 0 0;
+            color: #5a3818;
+            font-size: 12.5px;
+            line-height: 1.4;
+        }
+        .backup-card { margin-bottom: 18px; }
+        .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .backup-link {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        @media (max-width: 900px) {
+            .system-overview-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 520px) {
+            .system-card { padding: 12px; }
+            .system-card h2 { font-size: 18px; }
+        }
     </style>
 </head>
 <body>
@@ -258,6 +395,78 @@
                 <div class="val" id="statUserBank">800 мон.</div>
             </div>
         </div>
+
+        <div class="system-overview-grid">
+            <section class="system-card" aria-labelledby="systemPassportTitle">
+                <h2 id="systemPassportTitle">🩺 Паспорт и здоровье сайта</h2>
+                <div class="system-facts">
+                    <div class="system-fact"><span>База данных</span><strong>Cloudflare D1 (SQLite)</strong></div>
+                    <div class="system-fact"><span>Языки</span><strong>HTML5, CSS3, JavaScript ES6+ / Workers, SQL</strong></div>
+                    <div class="system-fact"><span>Статические файлы</span><strong id="staticFilesWeight">Подсчёт…</strong></div>
+                    <div class="system-fact"><span>Таблиц D1</span><strong id="healthTableCount">—</strong></div>
+                </div>
+                <div class="system-counts" style="margin-top:10px;">
+                    <div class="system-count"><span>Пользователи</span><strong id="healthUsersCount">—</strong></div>
+                    <div class="system-count"><span>Сессии авторизации</span><strong id="healthSessionsCount">—</strong></div>
+                    <div class="system-count"><span>Сообщения чата</span><strong id="healthMessagesCount">—</strong></div>
+                    <div class="system-count"><span>Медиафайлы</span><strong id="healthMediaCount">—</strong></div>
+                </div>
+                <div class="storage-summary">
+                    <div><strong>Критическая масса до платного тарифа ($5/мес)</strong></div>
+                    <div style="display:flex; justify-content:space-between; gap:8px; margin-top:5px;">
+                        <span id="d1StorageValue">Размер D1 загружается…</span>
+                        <strong>500 MB</strong>
+                    </div>
+                    <div class="health-meter" id="d1UsageProgress" role="progressbar" aria-label="Использование лимита D1" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <span class="health-meter-fill" id="d1UsageFill"></span>
+                        <span class="health-warning-marker" aria-hidden="true"></span>
+                    </div>
+                    <div class="health-status" id="d1StorageStatus" role="status">Загрузка показателей…</div>
+                    <p class="health-note">Предупреждение начинается с 400 MB (80%). Медиа рекомендуется хранить в Cloudflare R2.</p>
+                </div>
+                <div class="quota-list" aria-label="Справочные суточные лимиты бесплатного тарифа">
+                    <div class="quota-row"><span>D1: чтение строк в сутки</span><strong id="limitD1Reads">5 000 000</strong></div>
+                    <div class="quota-row"><span>D1: запись строк в сутки</span><strong id="limitD1Writes">100 000</strong></div>
+                    <div class="quota-row"><span>Workers: запросы в сутки</span><strong id="limitWorkerRequests">100 000</strong></div>
+                </div>
+                <p class="health-note warning">Worker не видит текущее суточное использование: при приближении к этим квотам проверяйте фактические показатели в панели Cloudflare.</p>
+            </section>
+
+            <section class="system-card" aria-labelledby="securityReminderTitle">
+                <h2 id="securityReminderTitle">⚠️ Критическое напоминание и безопасность сайта</h2>
+                <div class="security-list">
+                    <div class="security-item warning" id="securityIndexes">
+                        <strong>Индексы чата и сессий</strong><span class="security-state" id="securityIndexesState">Проверка…</span>
+                        <p class="security-detail" id="securityIndexesDetail">Проверяются индексы созданного времени, отправителя/получателя и срока сессии.</p>
+                    </div>
+                    <div class="security-item">
+                        <strong>XSS в чате</strong><span class="security-state">ЗАЩИЩЕНО</span>
+                        <p class="security-detail">Текст сообщений выводится через textContent; ссылки на вложения допускают только HTTP/HTTPS, опасные схемы отклоняются.</p>
+                    </div>
+                    <div class="security-item">
+                        <strong>Подмена sender_id</strong><span class="security-state">ЗАЩИЩЕНО</span>
+                        <p class="security-detail">Worker берёт ID отправителя из проверенной auth_sessions-сессии, а не из тела запроса.</p>
+                    </div>
+                    <div class="security-item">
+                        <strong>Изображения в D1</strong><span class="security-state">ЛИМИТ СЕРВЕРА</span>
+                        <p class="security-detail" id="imageLimitDetail">Чат: до 350 КБ на изображение; изображения админки: до 256 КБ. Для больших медиа используйте Cloudflare R2.</p>
+                    </div>
+                    <div class="security-item warning">
+                        <strong>Перебор и AI-спам</strong><span class="security-state">НАСТРОИТЬ WAF</span>
+                        <p class="security-detail">Вход ограничен на сервере; включите Cloudflare WAF Rate Limiting для /api/auth/login и AI-маршрутов, включая /api/yaga-chat.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="system-card backup-card" aria-labelledby="backupTitle">
+            <h2 id="backupTitle">💾 Резервное копирование и перенос</h2>
+            <p class="health-note">Скачивайте резервную копию D1 отдельно от архива статических файлов сайта.</p>
+            <div class="backup-actions">
+                <a class="action-btn backup-link" href="/api/admin/export-db" download>⬇ Скачать базу данных (.sql)</a>
+                <a class="action-btn gold backup-link" href="https://github.com/tataole/7ia-mir1/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer">⬇ Скачать архив файлов сайта (.zip)</a>
+            </div>
+        </section>
 
         <div class="tabs-row">
             <button class="tab-btn active" id="admTabMedia" onclick="switchAdminTab('media')">
@@ -711,5 +920,115 @@
         });
     </script>
     <script src="auth.js"></script>
+    <script>
+        const SITE_STATIC_ASSET_BYTES = 85163565;
+        const SITE_STATIC_ASSET_COUNT = 188;
+
+        function formatAdminNumber(value) {
+            return new Intl.NumberFormat('ru-RU').format(value);
+        }
+
+        function renderStaticAssetSize() {
+            const staticMb = SITE_STATIC_ASSET_BYTES / 1000000;
+            const staticMib = SITE_STATIC_ASSET_BYTES / (1024 * 1024);
+            document.getElementById('staticFilesWeight').textContent =
+                `${SITE_STATIC_ASSET_COUNT} файлов • ${staticMb.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB (${staticMib.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MiB)`;
+        }
+
+        function renderAdminSystemHealth(health) {
+            const counts = health.rowCounts || {};
+            document.getElementById('healthTableCount').textContent = formatAdminNumber(health.tableCount || 0);
+            document.getElementById('healthUsersCount').textContent = formatAdminNumber(counts.users || 0);
+            document.getElementById('healthSessionsCount').textContent = formatAdminNumber(counts.auth_sessions || 0);
+            document.getElementById('healthMessagesCount').textContent = formatAdminNumber(counts.chat_messages || 0);
+            document.getElementById('healthMediaCount').textContent = formatAdminNumber(counts.media_items || 0);
+
+            const storage = health.storage || {};
+            const storageValue = document.getElementById('d1StorageValue');
+            const storageStatus = document.getElementById('d1StorageStatus');
+            const usageFill = document.getElementById('d1UsageFill');
+            const usageProgress = document.getElementById('d1UsageProgress');
+            if (storage.sizeBytes !== null && Number.isFinite(Number(storage.sizeBytes))) {
+                const bytes = Number(storage.sizeBytes);
+                const percentage = Math.max(0, Math.min(100, Number(storage.usagePercent) || 0));
+                const remainingBytes = Number(storage.remainingBytes) || 0;
+                storageValue.textContent =
+                    `${(bytes / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB из 500 MB`;
+                usageFill.style.width = `${percentage}%`;
+                usageFill.classList.toggle('warning', Boolean(storage.warning));
+                usageProgress.setAttribute('aria-valuenow', String(Math.round(percentage)));
+                storageStatus.classList.toggle('warning', Boolean(storage.warning));
+                storageStatus.textContent = storage.warning
+                    ? `ВНИМАНИЕ: база достигла порога ${formatAdminNumber(400)} MB. Остаток до лимита: ${(remainingBytes / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB.`
+                    : `Использовано ${percentage.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}%. До порога предупреждения — ${(Math.max(0, 400000000 - bytes) / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB.`;
+            } else {
+                storageValue.textContent = 'Размер D1 недоступен';
+                storageStatus.classList.add('warning');
+                storageStatus.textContent = storage.error || 'Не удалось прочитать PRAGMA page_count/page_size.';
+            }
+
+            const limits = health.dailyLimits || {};
+            document.getElementById('limitD1Reads').textContent = formatAdminNumber(limits.d1RowReads || 5000000);
+            document.getElementById('limitD1Writes').textContent = formatAdminNumber(limits.d1RowWrites || 100000);
+            document.getElementById('limitWorkerRequests').textContent = formatAdminNumber(limits.workerRequests || 100000);
+
+            const indexes = (health.security && health.security.indexes) || {};
+            const requiredIndexes = [
+                ['chatCreatedAt', 'chat_messages(created_at)'],
+                ['chatSenderTarget', 'chat_messages(sender_id, target_id)'],
+                ['authSessionsExpires', 'auth_sessions(expires_at)'],
+            ];
+            const missingIndexes = requiredIndexes
+                .filter(([key]) => !indexes[key])
+                .map(([, label]) => label);
+            const indexRow = document.getElementById('securityIndexes');
+            indexRow.classList.toggle('warning', missingIndexes.length > 0);
+            document.getElementById('securityIndexesState').textContent =
+                missingIndexes.length ? 'ТРЕБУЕТСЯ МИГРАЦИЯ' : 'ИНДЕКСЫ НАЙДЕНЫ';
+            document.getElementById('securityIndexesDetail').textContent = missingIndexes.length
+                ? `Не найдены: ${missingIndexes.join(', ')}. Примените migrations/0006_security_and_indexes.sql к D1.`
+                : 'Все нужные индексы найдены. Они уменьшают чтения при выборке сообщений и проверке срока сессии.';
+
+            const security = health.security || {};
+            const chatImageKb = Math.round((Number(security.chatImageMaxBytes) || 358400) / 1024);
+            const siteImageKb = Math.round((Number(security.siteImageMaxBytes) || 262144) / 1024);
+            document.getElementById('imageLimitDetail').textContent =
+                `Чат: до ${chatImageKb} КБ на изображение; изображения админки: до ${siteImageKb} КБ. Для больших медиа используйте Cloudflare R2.`;
+        }
+
+        async function loadAdminSystemHealth() {
+            try {
+                const response = await fetch('/api/admin/system-health', {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                renderAdminSystemHealth(await response.json());
+            } catch (error) {
+                console.error('Не удалось загрузить паспорт и здоровье сайта.', error);
+                document.getElementById('d1StorageValue').textContent = 'Данные недоступны';
+                const status = document.getElementById('d1StorageStatus');
+                status.classList.add('warning');
+                status.textContent = `Не удалось получить данные системы: ${error.message}`;
+                document.getElementById('securityIndexesState').textContent = 'ПРОВЕРКА НЕ УДАЛАСЬ';
+                document.getElementById('securityIndexesDetail').textContent =
+                    'Не удалось получить состояние индексов из /api/admin/system-health.';
+            }
+        }
+
+        renderStaticAssetSize();
+        if (window.GornitsaAuth && window.GornitsaAuth.ready) {
+            window.GornitsaAuth.ready.then(user => {
+                if (user && user.role === 'admin') loadAdminSystemHealth();
+                else {
+                    document.getElementById('securityIndexesState').textContent = 'ТРЕБУЕТСЯ ВХОД';
+                    document.getElementById('securityIndexesDetail').textContent = 'Статусы индексов доступны только администратору.';
+                }
+            });
+        } else {
+            document.getElementById('securityIndexesState').textContent = 'НЕТ СЕССИИ';
+            document.getElementById('securityIndexesDetail').textContent = 'Проверка доступна только после входа администратора.';
+        }
+    </script>
 </body>
 </html>
