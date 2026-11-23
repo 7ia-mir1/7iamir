@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     file_size_formatted TEXT,
     delete_scope TEXT NOT NULL DEFAULT 'off',
     no_save INTEGER NOT NULL DEFAULT 0 CHECK (no_save IN (0, 1)),
+    channel TEXT DEFAULT 'private' CHECK (channel IN ('private', 'public', 'police', 'supreme')),
     created_at INTEGER NOT NULL,
     expires_at INTEGER
 );
@@ -23,6 +24,9 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_expires_at
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_target
     ON chat_messages (sender_id, target_id);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_channel
+    ON chat_messages (channel, created_at);
 
 CREATE TABLE IF NOT EXISTS media_items (
     id TEXT PRIMARY KEY,

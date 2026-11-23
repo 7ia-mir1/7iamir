@@ -538,9 +538,9 @@ async function handleChat(request, env, session) {
     const result = await env.DB.prepare(
       `SELECT id, sender_id, target_id, text, file_url, file_name,
               image_data_url, image_size_kb, file_data_url, file_size_formatted,
-              delete_scope, no_save, created_at, expires_at
+              delete_scope, no_save, channel, created_at, expires_at
        FROM chat_messages
-       WHERE target_id = 'ALL' OR sender_id = ? OR target_id = ?
+       WHERE (target_id = 'ALL' OR sender_id = ? OR target_id = ?)
        ORDER BY created_at DESC
        LIMIT ?`,
     ).bind(userId, userId, limit + 1).all();
@@ -593,6 +593,17 @@ async function handleChat(request, env, session) {
       : ["off", "me", "both"].includes(body.delete_scope)
         ? body.delete_scope
         : "off";
+    
+    // Определяем канал на основе targetId
+    let channel = 'private';
+    if (targetId === 'ALL') {
+      channel = 'public';
+    } else if (targetId === '1002') {
+      channel = 'police';
+    } else if (targetId === '1003') {
+      channel = 'supreme';
+    }
+    
     const payloadBytes = new TextEncoder().encode(
       `${text}${imageDataUrl || ""}${fileDataUrl || ""}${fileName || ""}${fileSizeFormatted || ""}`,
     ).byteLength;
@@ -669,6 +680,7 @@ async function handleChat(request, env, session) {
       file_size_formatted: fileSizeFormatted,
       delete_scope: deleteScope,
       no_save: noSave ? 1 : 0,
+      channel: channel,
       created_at: createdAt,
       expires_at: expiresAt,
     };
@@ -677,8 +689,8 @@ async function handleChat(request, env, session) {
       `INSERT INTO chat_messages
        (id, sender_id, target_id, text, file_url, file_name,
         image_data_url, image_size_kb, file_data_url, file_size_formatted,
-        delete_scope, no_save, created_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        delete_scope, no_save, channel, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       message.id,
       message.sender_id,
@@ -692,6 +704,7 @@ async function handleChat(request, env, session) {
       message.file_size_formatted,
       message.delete_scope,
       message.no_save,
+      channel,
       message.created_at,
       message.expires_at,
     ).run();

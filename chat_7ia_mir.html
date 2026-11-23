@@ -66,16 +66,19 @@
     border-bottom: 5px solid var(--wood-border);
     padding: 0 20px 8px;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     gap: 16px;
   }
 
-  .header-left-group {
+  .sidebar-header-text {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 0;
   }
 
   .header-group-img {
@@ -112,11 +115,8 @@
   .header-subtitle {
     font-size: 14px;
     color: #d8c29d;
-    margin-top: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    margin: 0;
+    text-align: center;
   }
 
   .online-dot {
@@ -157,12 +157,12 @@
   }
 
   .my-id-badge {
-    margin: 10px 12px;
-    padding: 8px 12px;
+    margin: 0 12px 8px;
+    padding: 6px 10px;
     background: rgba(58, 34, 16, 0.12);
     border: 1px dashed var(--wood-mid);
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
     text-align: center;
     font-weight: bold;
   }
@@ -175,6 +175,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-height: 0;
   }
 
   .user-item {
@@ -277,10 +278,36 @@
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px;
+    gap: 5px;
+    padding: 8px;
     border-top: 2px solid rgba(92, 56, 28, 0.25);
     background: rgba(207, 179, 130, 0.5);
+  }
+
+  .sidebar-btn-with-question {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .btn-question {
+    flex: 0 0 auto;
+    color: #ffe8b3;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 7px 2px;
+    user-select: none;
+    transition: all 0.2s ease;
+  }
+
+  .btn-question:hover {
+    color: var(--gold-accent);
+    text-shadow: 0 0 8px rgba(255, 212, 0, 0.5);
+  }
+
+  .sidebar-service-btn.flex-grow {
+    flex: 1;
   }
 
   .sidebar-service-btn {
@@ -288,10 +315,10 @@
     width: 100%;
     align-items: center;
     justify-content: center;
-    padding: 10px 12px;
+    padding: 7px 10px;
     color: #ffe8b3;
     font: inherit;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     text-align: center;
     background: linear-gradient(180deg, #8b5a2b 0%, #5c381c 100%);
@@ -326,8 +353,11 @@
   }
 
   /* Иконка вопроса рядом с ПОЛИЦИЯ */
-  .police-btn::after {
-    content: " ?";
+  .police-btn::before {
+    content: "(?) ";
+    margin-right: 2px;
+    font-size: 16px;
+    margin-left: 6px;
     font-size: 16px;
     margin-left: 6px;
   }
@@ -430,6 +460,61 @@
   }
 
   #blocksModal .btn-close-modal:hover {
+    filter: brightness(1.12);
+  }
+
+  /* Информационные модальные окна для ПОЛИЦИИ и Верховного */
+  .info-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10001;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .info-modal-overlay.open {
+    display: flex;
+  }
+
+  .info-modal {
+    background: linear-gradient(135deg, #5e381b 0%, #3a210e 100%);
+    border: 4px solid #261508;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.9);
+    color: #ecd9b5;
+    font-family: 'PT Serif', serif;
+  }
+
+  .info-modal-content {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #d9c9a8;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+
+  .info-modal .btn-close-modal {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(180deg, #8b5a2b 0%, #5c381c 100%);
+    border: 2px solid #261508;
+    color: #ffe8b3;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .info-modal .btn-close-modal:hover {
     filter: brightness(1.12);
   }
 
@@ -2796,17 +2881,25 @@
       <aside class="sidebar-online">
         <header class="chat-header">
           <img class="header-group-img" src="images/header_group.jpg" alt="Люди на телеге">
-          <div class="header-subtitle" id="onlineCountLabel">Анонимная связь. В сети: … ID</div>
-          <div class="my-id-badge" id="myIdBadge">Ваш ID: загрузка...</div>
         </header>
+        <div class="sidebar-header-text">
+          <div class="header-subtitle" id="onlineCountLabel">Анонимная связь</div>
+          <div class="my-id-badge" id="myIdBadge">Ваш ID: загрузка...</div>
+        </div>
         <div class="online-list" id="onlineList">
           <!-- Личные диалоги заполняются скриптом -->
         </div>
         <!-- Закреплённая панель служебных кнопок -->
         <div class="sidebar-fixed-buttons">
           <button type="button" class="sidebar-service-btn" id="generalChatBtn" data-room="ALL" title="Общий чат для всех">Общий чат</button>
-          <button type="button" class="sidebar-service-btn" id="supremeChatBtn" title="Чат с Верховным">Чат с Верховным</button>
-          <button type="button" class="sidebar-service-btn police-btn" id="policeBtn" title="Служба порядка">🛡 ПОЛИЦИЯ</button>
+          <div class="sidebar-btn-with-question">
+            <span class="btn-question" onclick="openSupremeInfoModal(); event.stopPropagation();" title="Информация">(?) </span>
+            <button type="button" class="sidebar-service-btn flex-grow" id="supremeChatBtn" title="Чат с Верховным">Чат с Верховным</button>
+          </div>
+          <div class="sidebar-btn-with-question">
+            <span class="btn-question" onclick="openPoliceInfoModal(); event.stopPropagation();" title="Правила">(?) </span>
+            <button type="button" class="sidebar-service-btn police-btn flex-grow" id="policeBtn" title="Служба порядка">ПОЛИЦИЯ</button>
+          </div>
           <button type="button" class="sidebar-service-btn" id="blocksBtn" title="Управление заблокированными пользователями">Блокировки</button>
         </div>
       </aside>
@@ -3022,7 +3115,7 @@
 
     onlineUsers.forEach(u => {
       // Не показываем: заблокированных пользователей, тестовые фиктивные ID, и 'ALL'
-      if (isUserBlocked(u.id) || isUserBlocked(u.id) || u.id === 'ALL' || u.id === 'test' || u.id === '0') {
+      if (isUserBlocked(u.id) || u.id === 'ALL' || u.id === 'test' || u.id === '0') {
         return;
       }
 
@@ -3047,11 +3140,6 @@
       });
       onlineListEl.appendChild(item);
     });
-
-    const onlineCountLabel = document.getElementById('onlineCountLabel');
-    onlineCountLabel.title = '';
-    onlineCountLabel.textContent =
-      `Анонимная связь. В сети: ${1 + onlineUsers.filter(user => user.id !== 'ALL' && user.online && !isUserBlocked(user.id)).length} ID`;
   }
 
   function openDirectChat(targetId, openedFromSupremeButton = false) {
@@ -3082,13 +3170,26 @@
   function updateRoomHeader() {
     if (selectedTargetId === 'ALL') {
       currentRoomTitleEl.textContent = 'Общий зал';
-    } else if (isSupremeChatSelected) {
+    } else if (selectedTargetId === '1003') {
       currentRoomTitleEl.textContent = 'Чат с Верховным';
+      isSupremeChatSelected = true;
+    } else if (selectedTargetId === '1002') {
+      currentRoomTitleEl.textContent = 'ПОЛИЦИЯ';
+      isSupremeChatSelected = false;
     } else {
       currentRoomTitleEl.textContent = `Личный чат с ID ${selectedTargetId}`;
+      isSupremeChatSelected = false;
     }
-    supremeChatBtn.classList.toggle('active', isSupremeChatSelected);
-    supremeChatBtn.setAttribute('aria-pressed', String(isSupremeChatSelected));
+    const supremeChatBtn = document.getElementById('supremeChatBtn');
+    if (supremeChatBtn) {
+      supremeChatBtn.classList.toggle('active', selectedTargetId === '1003');
+      supremeChatBtn.setAttribute('aria-pressed', String(selectedTargetId === '1003'));
+    }
+    const policeBtn = document.getElementById('policeBtn');
+    if (policeBtn) {
+      policeBtn.classList.toggle('active', selectedTargetId === '1002');
+      policeBtn.setAttribute('aria-pressed', String(selectedTargetId === '1002'));
+    }
     updatePrivacyBadge();
   }
 
@@ -4006,6 +4107,34 @@
     }
   }
 
+  function openPoliceInfoModal() {
+    const overlay = document.getElementById('policeInfoModalOverlay');
+    if (overlay) {
+      overlay.classList.add('open');
+    }
+  }
+
+  function closePoliceInfoModal() {
+    const overlay = document.getElementById('policeInfoModalOverlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+    }
+  }
+
+  function openSupremeInfoModal() {
+    const overlay = document.getElementById('supremeInfoModalOverlay');
+    if (overlay) {
+      overlay.classList.add('open');
+    }
+  }
+
+  function closeSupremeInfoModal() {
+    const overlay = document.getElementById('supremeInfoModalOverlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+    }
+  }
+
   // Загрузим список блокировок при запуске
   loadBlockedUsers();
 
@@ -4026,10 +4155,25 @@
     blocksBtn.addEventListener('click', openBlocksModal);
   }
 
+  const supremeChatBtn = document.getElementById('supremeChatBtn');
+  if (supremeChatBtn) {
+    supremeChatBtn.addEventListener('click', () => {
+      selectedTargetId = '1003';
+      isSupremeChatSelected = true;
+      renderOnlineList();
+      updateRoomHeader();
+      renderMessages({ forceScrollBottom: true });
+    });
+  }
+
   const policeBtn = document.getElementById('policeBtn');
   if (policeBtn) {
     policeBtn.addEventListener('click', () => {
-      alert('Служба порядка: контакт пока не установлен. ID полиции: 1002');
+      selectedTargetId = '1002';
+      isSupremeChatSelected = false;
+      renderOnlineList();
+      updateRoomHeader();
+      renderMessages({ forceScrollBottom: true });
     });
   }
 
@@ -4045,6 +4189,26 @@
       <!-- Заполняется скриптом -->
     </div>
     <button type="button" class="btn-close-modal" onclick="closeBlocksModal()">Закрыть</button>
+  </div>
+</div>
+
+<!-- Модальное окно для информации о ПОЛИЦИИ -->
+<div id="policeInfoModalOverlay" class="info-modal-overlay" onclick="closePoliceInfoModal()">
+  <div id="policeInfoModal" class="info-modal" onclick="event.stopPropagation()">
+    <div class="info-modal-content">
+      Запрещается в чатах ругаться, оскорблять, обижать собеседников. Личные и Общий Чаты не модерируются и не просматриваются. Но пользователь может подать жалобу в ПОЛИЦИЮ, сделав скрин некорректных сообщений.
+    </div>
+    <button type="button" class="btn-close-modal" onclick="closePoliceInfoModal()">Согласен — закрыть</button>
+  </div>
+</div>
+
+<!-- Модальное окно для информации о Верховном -->
+<div id="supremeInfoModalOverlay" class="info-modal-overlay" onclick="closeSupremeInfoModal()">
+  <div id="supremeInfoModal" class="info-modal" onclick="event.stopPropagation()">
+    <div class="info-modal-content">
+      Прямая связь с Верховным (администратором портала) по организационным и техническим вопросам.
+    </div>
+    <button type="button" class="btn-close-modal" onclick="closeSupremeInfoModal()">Согласен — закрыть</button>
   </div>
 </div>
 
