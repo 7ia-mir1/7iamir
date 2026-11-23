@@ -1714,6 +1714,7 @@ async function handleWorkerRequest(request, env) {
       }
       if (pathname === "/api/presence") return await handlePresence(request, env, session);
       if (pathname === "/api/chat") return await handleChat(request, env, session);
+      if (pathname === "/api/blocks") return await handleBlocks(request, env, session);
       if (pathname === "/api/yaga-chat") return await handleYagaChat(request, env);
       if (pathname === "/api/media") return await handleMedia(request, env);
       if (pathname === "/api/coins") return await handleCoins(request, env, session);
@@ -1726,6 +1727,69 @@ async function handleWorkerRequest(request, env) {
       console.error("Worker request failed:", error);
       return errorResponse("Внутренняя ошибка сервера.", 500);
     }
+}
+
+async function handleBlocks(request, env, session) {
+  const userId = session.id;
+
+  if (request.method === "GET") {
+    const result = await env.DB.prepare(
+      `SELECT blocked_id, created_at FROM user_blocks WHERE blocker_id = ? ORDER BY created_at DESC`,
+    ).bind(userId).all();
+    
+    const blocks = (result.results || []).map(row => ({
+      blocked_id: row.blocked_id,
+      created_at: row.created_at,
+    }));
+
+    return jsonResponse({ blocks });
+  }
+
+  if (request.method === "POST") {
+    const body = await readJson(request);
+    if (!body) return errorResponse("Ожидается JSON-объект.");
+
+    const blockedId = typeof body.blocked_id === "string" ? body.blocked_id.trim() : "";
+    if (!blockedId || !/^\d{1,10}$/.test(blockedId)) {
+      return errorResponse("Укажите валидный ID пользователя.");
+    }
+    if (blockedId === userId) {
+      return errorResponse("Нельзя заблокировать самого себя.");
+    }
+
+    const user = await env.DB.prepare(
+      "SELECT id FROM users WHERE id = ?",
+    ).bind(blockedId).first();
+    if (!user) return errorResponse("Пользователь не найден.", 404);
+
+    const existing = await env.DB.prepare(
+      "SELECT blocker_id FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?",
+    ).bind(userId, blockedId).first();
+    if (existing) return errorResponse("Этот ID уже заблокирован.", 409);
+
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(
+      `INSERT INTO user_blocks (blocker_id, blocked_id, created_at) VALUES (?, ?, ?)`,
+    ).bind(userId, blockedId, now).run();
+
+    return jsonResponse({ status: "ok", blocked_id: blockedId, created_at: now }, 201);
+  }
+
+  if (request.method === "DELETE") {
+    const url = new URL(request.url);
+    const blockedId = url.searchParams.get("blocked_id") || "";
+    if (!blockedId || !/^\d{1,10}$/.test(blockedId)) {
+      return errorResponse("Укажите валидный ID пользователя.");
+    }
+
+    await env.DB.prepare(
+      `DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?`,
+    ).bind(userId, blockedId).run();
+
+    return jsonResponse({ status: "ok", blocked_id: blockedId });
+  }
+
+  return errorResponse("Метод не поддерживается.", 405);
 }
 
 export default {

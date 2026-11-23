@@ -272,8 +272,205 @@
     box-shadow: 0 0 8px var(--green-online);
   }
 
-  /* Правая часть: Окно сообщений + Панель ввода */
-  .chat-main {
+  /* Закреплённая панель служебных кнопок внизу левой колонки */
+  .sidebar-fixed-buttons {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border-top: 2px solid rgba(92, 56, 28, 0.25);
+    background: rgba(207, 179, 130, 0.5);
+  }
+
+  .sidebar-service-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 12px;
+    color: #ffe8b3;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    background: linear-gradient(180deg, #8b5a2b 0%, #5c381c 100%);
+    border: 2px solid #261508;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+
+  .sidebar-service-btn:hover {
+    filter: brightness(1.12);
+    border-color: var(--gold-accent);
+  }
+
+  .sidebar-service-btn.active {
+    background: linear-gradient(135deg, #4a2a12 0%, #2b1708 100%);
+    border-color: #ffcc00;
+    color: #ffea79;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55), 0 0 12px rgba(255, 204, 0, 0.45);
+  }
+
+  .police-btn {
+    background: linear-gradient(180deg, #2a5aab 0%, #1a3a7b 100%);
+    border-color: #0a1a4b;
+    color: #ffffff;
+  }
+
+  .police-btn:hover {
+    filter: brightness(1.12);
+    border-color: #4a7acb;
+  }
+
+  /* Иконка вопроса рядом с ПОЛИЦИЯ */
+  .police-btn::after {
+    content: " ?";
+    font-size: 16px;
+    margin-left: 6px;
+  }
+
+  /* Прежний стиль для совместимости */
+  .supreme-disabled {
+    display: none;
+  }
+
+  /* Div контейнер для диалога блокировок */
+  #blocksModalOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+  }
+
+  #blocksModalOverlay.open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #blocksModal {
+    background: linear-gradient(135deg, #5e381b 0%, #3a210e 100%);
+    border: 4px solid #261508;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.9);
+    color: #ecd9b5;
+    font-family: 'PT Serif', serif;
+  }
+
+  #blocksModal h3 {
+    font-family: 'Philosopher', serif;
+    font-size: 18px;
+    color: #ffe3a3;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(255,255,255,0.2);
+  }
+
+  #blocksModal .blocked-user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    background: rgba(255, 248, 231, 0.1);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    gap: 10px;
+  }
+
+  #blocksModal .blocked-user-id {
+    font-weight: 700;
+    color: #ffea79;
+  }
+
+  #blocksModal .btn-unblock {
+    padding: 4px 10px;
+    font-size: 12px;
+    background: linear-gradient(180deg, #2a5aab 0%, #1a3a7b 100%);
+    border: 1px solid #4a7acb;
+    color: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  #blocksModal .btn-unblock:hover {
+    filter: brightness(1.15);
+  }
+
+  #blocksModal .blocks-empty {
+    text-align: center;
+    color: #c5a67a;
+    padding: 20px;
+  }
+
+  #blocksModal .btn-close-modal {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin-top: 12px;
+    background: linear-gradient(180deg, #8b5a2b 0%, #5c381c 100%);
+    border: 2px solid #261508;
+    color: #ffe8b3;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  #blocksModal .btn-close-modal:hover {
+    filter: brightness(1.12);
+  }
+
+  /* Кнопка заблокировать в чате */
+  .btn-block-user {
+    background: linear-gradient(180deg, #2a5aab 0%, #1a3a7b 100%);
+    border: 1px solid #4a7acb;
+    color: #ffffff;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-block-user:hover {
+    filter: brightness(1.15);
+  }
+
+  /* Кнопка ответить в общем чате */
+  .btn-reply-message {
+    background: linear-gradient(180deg, #38a953 0%, #1f7034 100%);
+    border: 1px solid #5acb6b;
+    color: #ffffff;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .btn-reply-message:hover {
+    filter: brightness(1.15);
+  }
+
+  .msg-actions {
+    margin-top: 4px;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -2602,9 +2799,15 @@
           <div class="header-subtitle" id="onlineCountLabel">Анонимная связь. В сети: … ID</div>
           <div class="my-id-badge" id="myIdBadge">Ваш ID: загрузка...</div>
         </header>
-        <button type="button" class="supreme-disabled" id="supremeChatBtn">Чат с Верховным</button>
         <div class="online-list" id="onlineList">
-          <!-- Заполняется скриптом -->
+          <!-- Личные диалоги заполняются скриптом -->
+        </div>
+        <!-- Закреплённая панель служебных кнопок -->
+        <div class="sidebar-fixed-buttons">
+          <button type="button" class="sidebar-service-btn" id="generalChatBtn" data-room="ALL" title="Общий чат для всех">Общий чат</button>
+          <button type="button" class="sidebar-service-btn" id="supremeChatBtn" title="Чат с Верховным">Чат с Верховным</button>
+          <button type="button" class="sidebar-service-btn police-btn" id="policeBtn" title="Служба порядка">🛡 ПОЛИЦИЯ</button>
+          <button type="button" class="sidebar-service-btn" id="blocksBtn" title="Управление заблокированными пользователями">Блокировки</button>
         </div>
       </aside>
 
@@ -2818,6 +3021,11 @@
     onlineListEl.innerHTML = '';
 
     onlineUsers.forEach(u => {
+      // Не показываем: заблокированных пользователей, тестовые фиктивные ID, и 'ALL'
+      if (isUserBlocked(u.id) || isUserBlocked(u.id) || u.id === 'ALL' || u.id === 'test' || u.id === '0') {
+        return;
+      }
+
       const isSelected = u.id === selectedTargetId;
       const item = document.createElement('button');
       item.type = 'button';
@@ -2843,7 +3051,7 @@
     const onlineCountLabel = document.getElementById('onlineCountLabel');
     onlineCountLabel.title = '';
     onlineCountLabel.textContent =
-      `Анонимная связь. В сети: ${1 + onlineUsers.filter(user => user.id !== 'ALL' && user.online).length} ID`;
+      `Анонимная связь. В сети: ${1 + onlineUsers.filter(user => user.id !== 'ALL' && user.online && !isUserBlocked(user.id)).length} ID`;
   }
 
   function openDirectChat(targetId, openedFromSupremeButton = false) {
@@ -3278,6 +3486,36 @@
       }
       actions.appendChild(timer);
 
+      // Кнопка "Ответить" в общем чате
+      if (selectedTargetId === 'ALL' && !isMine) {
+        const replyBtn = document.createElement('button');
+        replyBtn.type = 'button';
+        replyBtn.className = 'btn-reply-message';
+        replyBtn.title = 'Ответить личным сообщением';
+        replyBtn.textContent = '✉ Ответить';
+        replyBtn.addEventListener('click', () => {
+          openDirectChat(msg.senderId);
+        });
+        actions.appendChild(replyBtn);
+      }
+
+      // Кнопка "Заблокировать" в личном чате (не для своих сообщений)
+      if (selectedTargetId !== 'ALL' && !isMine && selectedTargetId !== myId) {
+        const blockBtn = document.createElement('button');
+        blockBtn.type = 'button';
+        blockBtn.className = 'btn-block-user';
+        blockBtn.title = 'Заблокировать этого пользователя';
+        blockBtn.textContent = '🛡 Блокировать';
+        blockBtn.addEventListener('click', async () => {
+          if (confirm(`Заблокировать ID ${msg.senderId}? Вы оба не сможете видеть друг друга.`)) {
+            await blockUser(msg.senderId);
+            renderOnlineList();
+            renderMessages();
+          }
+        });
+        actions.appendChild(blockBtn);
+      }
+
       const deleteForMe = document.createElement('button');
       deleteForMe.type = 'button';
       deleteForMe.className = 'btn-delete-msg';
@@ -3376,6 +3614,13 @@
   }
 
   function addMessageToChat(payload) {
+    // Проверка на блокировку
+    const targetId = payload.targetId || selectedTargetId;
+    if (targetId !== 'ALL' && isUserBlocked(targetId)) {
+      alert(`Вы не можете отправить сообщение ID ${targetId}, потому что вы блокировали этого пользователя или он заблокировал вас.`);
+      return;
+    }
+
     const autoDel = autoDeleteModeEl.value;
 
     let expiresAt = null;
@@ -3396,7 +3641,7 @@
     const newMsg = {
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       senderId: payload.senderId || myId,
-      targetId: payload.targetId || selectedTargetId,
+      targetId: targetId,
       text: payload.text || '',
       imageDataUrl: payload.imageDataUrl || null,
       imageSizeKb: payload.imageSizeKb || null,
@@ -3659,7 +3904,150 @@
   renderMessages({ forceScrollBottom: true });
   loadMessagesFromServer();
   setInterval(loadMessagesFromServer, 3000);
+
+  // ===== СИСТЕМА БЛОКИРОВОК =====
+  let blockedUsers = [];
+
+  async function loadBlockedUsers() {
+    try {
+      const response = await fetch('/api/blocks', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      blockedUsers = Array.isArray(data.blocks) ? data.blocks.map(b => b.blocked_id) : [];
+    } catch (error) {
+      console.error('Не удалось загрузить список блокировок:', error);
+      blockedUsers = [];
+    }
+  }
+
+  async function blockUser(blockedId) {
+    try {
+      const response = await fetch('/api/blocks', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ blocked_id: blockedId }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Ошибка блокировки: ${error.error || 'Неизвестная ошибка'}`);
+        return false;
+      }
+      await loadBlockedUsers();
+      return true;
+    } catch (error) {
+      console.error('Ошибка при блокировке:', error);
+      alert('Ошибка при блокировке пользователя.');
+      return false;
+    }
+  }
+
+  async function unblockUser(blockedId) {
+    try {
+      const response = await fetch(`/api/blocks?blocked_id=${encodeURIComponent(blockedId)}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await loadBlockedUsers();
+      renderBlocksModal();
+      return true;
+    } catch (error) {
+      console.error('Ошибка при разблокировке:', error);
+      alert('Ошибка при разблокировке пользователя.');
+      return false;
+    }
+  }
+
+  function isUserBlocked(userId) {
+    return blockedUsers.includes(userId);
+  }
+
+  function renderBlocksModal() {
+    const container = document.getElementById('blocksModalContent');
+    if (!container) return;
+
+    if (blockedUsers.length === 0) {
+      container.innerHTML = '<div class="blocks-empty">Вы не заблокировали никого.</div>';
+      return;
+    }
+
+    container.innerHTML = blockedUsers.map(userId => `
+      <div class="blocked-user-item">
+        <span class="blocked-user-id">ID ${userId}</span>
+        <button type="button" class="btn-unblock" data-user-id="${userId}">Разблокировать</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-unblock').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.getAttribute('data-user-id');
+        await unblockUser(userId);
+      });
+    });
+  }
+
+  function openBlocksModal() {
+    const overlay = document.getElementById('blocksModalOverlay');
+    const modal = document.getElementById('blocksModal');
+    if (overlay && modal) {
+      overlay.classList.add('open');
+      renderBlocksModal();
+    }
+  }
+
+  function closeBlocksModal() {
+    const overlay = document.getElementById('blocksModalOverlay');
+    if (overlay) {
+      overlay.classList.remove('open');
+    }
+  }
+
+  // Загрузим список блокировок при запуске
+  loadBlockedUsers();
+
+  // Привязка кнопок левой колонки к функциям
+  const generalChatBtn = document.getElementById('generalChatBtn');
+  if (generalChatBtn) {
+    generalChatBtn.addEventListener('click', () => {
+      selectedTargetId = 'ALL';
+      isSupremeChatSelected = false;
+      renderOnlineList();
+      updateRoomHeader();
+      renderMessages({ forceScrollBottom: true });
+    });
+  }
+
+  const blocksBtn = document.getElementById('blocksBtn');
+  if (blocksBtn) {
+    blocksBtn.addEventListener('click', openBlocksModal);
+  }
+
+  const policeBtn = document.getElementById('policeBtn');
+  if (policeBtn) {
+    policeBtn.addEventListener('click', () => {
+      alert('Служба порядка: контакт пока не установлен. ID полиции: 1002');
+    });
+  }
+
+  // ===== КОНЕЦ СИСТЕМЫ БЛОКИРОВОК =====
+
 </script>
+
+<!-- Модальное окно для управления блокировками -->
+<div id="blocksModalOverlay" class="blocks-modal-overlay">
+  <div id="blocksModal" class="blocks-modal">
+    <h3>Заблокированные пользователи</h3>
+    <div id="blocksModalContent">
+      <!-- Заполняется скриптом -->
+    </div>
+    <button type="button" class="btn-close-modal" onclick="closeBlocksModal()">Закрыть</button>
+  </div>
+</div>
+
     <script src="auth.js"></script>
 </body>
 </html>
