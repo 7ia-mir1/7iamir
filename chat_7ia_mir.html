@@ -562,12 +562,6 @@
     gap: 5px;
     flex-wrap: wrap;
   }
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: radial-gradient(circle, #f5e6c8 0%, #e2cba0 100%);
-    position: relative;
-  }
 
   /* Верхняя плашка текущего собеседника */
   .active-dialog-bar {
@@ -3159,6 +3153,11 @@
   const privacyStatusPillEl = document.getElementById('privacyStatusPill');
   const bottomSystemNoticeEl = document.getElementById('bottomSystemNotice');
 
+  if (!onlineListEl || !currentRoomTitleEl || !privacyStatusPillEl || !bottomSystemNoticeEl) {
+    console.error('Critical DOM elements not found. Chat cannot initialize.');
+    throw new Error('Missing required DOM elements for chat initialization');
+  }
+
   function renderOnlineList() {
     onlineListEl.innerHTML = '';
 
@@ -3212,9 +3211,11 @@
   }
 
   const supremeChatBtn = document.getElementById('supremeChatBtn');
-  supremeChatBtn.disabled = myId === '1003';
-  supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
-  supremeChatBtn.addEventListener('click', () => openDirectChat('1003', true));
+  if (supremeChatBtn) {
+    supremeChatBtn.disabled = myId === '1003';
+    supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
+    supremeChatBtn.addEventListener('click', () => openDirectChat('1003', true));
+  }
 
   function updateRoomHeader() {
     if (selectedTargetId === 'ALL') {
@@ -3296,11 +3297,11 @@
 
   // Периодически проверяем, загружен ли myId из auth.js
   let idCheckCount = 0;
-  window.setInterval(() => {
+  const idCheckInterval = window.setInterval(() => {
     if (updateMyId()) {
       idCheckCount = 0;  // Reset on success
     } else if (++idCheckCount > 100) {
-      clearInterval(this);  // Stop checking after 10 seconds
+      clearInterval(idCheckInterval);  // Stop checking after 10 seconds
     }
   }, 100);
 
@@ -3321,32 +3322,39 @@
     simulatePartnerStrictToggleEl.checked = false;
   }
 
-  unlimitedChatToggleEl.addEventListener('change', () => {
-    if (unlimitedChatToggleEl.checked) {
-      autoDeleteModeEl.value = 'off';
-      saveChatModeEl.value = 'save';
-      dontSaveMyChatToggleEl.checked = false;
-      simulatePartnerStrictToggleEl.checked = false;
-    }
-    updatePrivacyBadge();
-  });
+  if (unlimitedChatToggleEl) {
+    unlimitedChatToggleEl.addEventListener('change', () => {
+      if (unlimitedChatToggleEl.checked) {
+        autoDeleteModeEl.value = 'off';
+        saveChatModeEl.value = 'save';
+        dontSaveMyChatToggleEl.checked = false;
+        simulatePartnerStrictToggleEl.checked = false;
+      }
+      updatePrivacyBadge();
+    });
+  }
 
   // Синхронизация выпадающего списка «Сохранение чата» и галочки «Не сохранять чат у меня»
-  saveChatModeEl.addEventListener('change', () => {
-    dontSaveMyChatToggleEl.checked = (saveChatModeEl.value === 'no_save_me');
-    syncUnlimitedCheckbox();
-  });
+  if (saveChatModeEl) {
+    saveChatModeEl.addEventListener('change', () => {
+      if (dontSaveMyChatToggleEl) dontSaveMyChatToggleEl.checked = (saveChatModeEl.value === 'no_save_me');
+      syncUnlimitedCheckbox();
+    });
+  }
 
-  dontSaveMyChatToggleEl.addEventListener('change', () => {
-    if (dontSaveMyChatToggleEl.checked) {
-      saveChatModeEl.value = 'no_save_me';
-    } else if (saveChatModeEl.value === 'no_save_me') {
-      saveChatModeEl.value = 'save';
-    }
-    syncUnlimitedCheckbox();
-  });
+  if (dontSaveMyChatToggleEl) {
+    dontSaveMyChatToggleEl.addEventListener('change', () => {
+      if (dontSaveMyChatToggleEl.checked) {
+        if (saveChatModeEl) saveChatModeEl.value = 'no_save_me';
+      } else if (saveChatModeEl && saveChatModeEl.value === 'no_save_me') {
+        saveChatModeEl.value = 'save';
+      }
+      syncUnlimitedCheckbox();
+    });
+  }
 
   function syncUnlimitedCheckbox() {
+    if (!unlimitedChatToggleEl || !autoDeleteModeEl || !saveChatModeEl || !dontSaveMyChatToggleEl || !simulatePartnerStrictToggleEl) return;
     const hasAnyRestriction =
       autoDeleteModeEl.value !== 'off' ||
       saveChatModeEl.value !== 'save' ||
@@ -3357,22 +3365,27 @@
     updatePrivacyBadge();
   }
 
-  autoDeleteModeEl.addEventListener('change', syncUnlimitedCheckbox);
-  simulatePartnerStrictToggleEl.addEventListener('change', syncUnlimitedCheckbox);
+  if (autoDeleteModeEl) autoDeleteModeEl.addEventListener('change', syncUnlimitedCheckbox);
+  if (simulatePartnerStrictToggleEl) simulatePartnerStrictToggleEl.addEventListener('change', syncUnlimitedCheckbox);
 
   function isLocalSaveDisabled() {
+    if (!saveChatModeEl || !dontSaveMyChatToggleEl || !simulatePartnerStrictToggleEl) return true;
     const target = onlineUsers.find(u => u.id === selectedTargetId);
     const partnerForcesNoSave = (target && target.strictNoSave) || simulatePartnerStrictToggleEl.checked;
     return saveChatModeEl.value !== 'save' || dontSaveMyChatToggleEl.checked || partnerForcesNoSave;
   }
 
   function isBothSidesNoSaveActive() {
+    if (!saveChatModeEl || !simulatePartnerStrictToggleEl) return false;
     const target = onlineUsers.find(u => u.id === selectedTargetId);
     const partnerForcesNoSave = (target && target.strictNoSave) || simulatePartnerStrictToggleEl.checked;
     return saveChatModeEl.value === 'no_save_both' || partnerForcesNoSave;
   }
 
   function updatePrivacyBadge() {
+    if (!privacyStatusPillEl || !bottomSystemNoticeEl || !autoDeleteModeEl || !unlimitedChatToggleEl || !saveChatModeEl || !dontSaveMyChatToggleEl || !simulatePartnerStrictToggleEl) {
+      return;
+    }
     const target = onlineUsers.find(u => u.id === selectedTargetId);
     const partnerForcesNoSave = (target && target.strictNoSave) || simulatePartnerStrictToggleEl.checked;
     const autoDel = autoDeleteModeEl.value;
@@ -3840,13 +3853,17 @@
     messageInputEl.focus();
   }
 
-  sendBtnEl.addEventListener('click', handleSendText);
-  messageInputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendText();
-    }
-  });
+  if (sendBtnEl) {
+    sendBtnEl.addEventListener('click', handleSendText);
+  }
+  if (messageInputEl) {
+    messageInputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendText();
+      }
+    });
+  }
 
   /********************************************************************
    * 4. ПАНЕЛЬ СМАЙЛИКОВ С БОЛЬШИМ ВЫБОРОМ
@@ -3854,23 +3871,29 @@
   const emojiBtnEl = document.getElementById('emojiBtn');
   const emojiPopoverEl = document.getElementById('emojiPopover');
 
-  emojiBtnEl.addEventListener('click', (e) => {
-    e.stopPropagation();
-    emojiPopoverEl.classList.toggle('open');
-  });
+  if (emojiBtnEl && emojiPopoverEl) {
+    emojiBtnEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      emojiPopoverEl.classList.toggle('open');
+    });
+  }
 
   document.querySelectorAll('.emoji-item').forEach(item => {
     item.addEventListener('click', () => {
-      messageInputEl.value += item.textContent;
-      messageInputEl.focus();
+      if (messageInputEl) {
+        messageInputEl.value += item.textContent;
+        messageInputEl.focus();
+      }
     });
   });
 
-  document.addEventListener('click', (e) => {
-    if (!emojiPopoverEl.contains(e.target) && e.target !== emojiBtnEl) {
-      emojiPopoverEl.classList.remove('open');
+  if (emojiPopoverEl && emojiBtnEl) {
+    document.addEventListener('click', (e) => {
+      if (!emojiPopoverEl.contains(e.target) && e.target !== emojiBtnEl) {
+        emojiPopoverEl.classList.remove('open');
     }
   });
+  }
 
   const chatWindowBox = document.querySelector('.izba-chat-container');
   const chatWindowMoveBtn = document.getElementById('chatWindowMoveBtn');
