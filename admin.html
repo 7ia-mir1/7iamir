@@ -451,9 +451,9 @@
                         <strong>Изображения в D1</strong><span class="security-state">ЛИМИТ СЕРВЕРА</span>
                         <p class="security-detail" id="imageLimitDetail">Чат: до 350 КБ на изображение; изображения админки: до 256 КБ. Для больших медиа используйте Cloudflare R2.</p>
                     </div>
-                    <div class="security-item warning">
-                        <strong>Перебор и AI-спам</strong><span class="security-state">НАСТРОИТЬ WAF</span>
-                        <p class="security-detail">Вход ограничен на сервере; включите Cloudflare WAF Rate Limiting для /api/auth/login и AI-маршрутов, включая /api/yaga-chat.</p>
+                    <div class="security-item warning" id="securityRateLimits">
+                        <strong>Подбор паролей и флуд</strong><span class="security-state" id="securityRateLimitsState">Проверка…</span>
+                        <p class="security-detail" id="securityRateLimitsDetail">Проверяется ограничение запросов по IP и ID на сервере.</p>
                     </div>
                 </div>
             </section>
@@ -922,7 +922,7 @@
     </script>
     <script src="auth.js"></script>
     <script>
-        const SITE_STATIC_ASSET_BYTES = 85163565;
+        const SITE_STATIC_ASSET_BYTES = 85167823;
         const SITE_STATIC_ASSET_COUNT = 188;
 
         function formatAdminNumber(value) {
@@ -991,19 +991,22 @@
                 const bytes = Number(storage.sizeBytes);
                 const percentage = Math.max(0, Math.min(100, Number(storage.usagePercent) || 0));
                 const remainingBytes = Number(storage.remainingBytes) || 0;
+                const measurementMethod = storage.estimated
+                    ? 'Оценка по данным таблиц (dbstat недоступен)'
+                    : 'Измерено через dbstat';
                 storageValue.textContent =
-                    `${(bytes / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB из 500 MB`;
+                    `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} КБ (${(bytes / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} МБ) из 500 МБ`;
                 usageFill.style.width = `${percentage}%`;
                 usageFill.classList.toggle('warning', Boolean(storage.warning));
                 usageProgress.setAttribute('aria-valuenow', String(Math.round(percentage)));
                 storageStatus.classList.toggle('warning', Boolean(storage.warning));
                 storageStatus.textContent = storage.warning
-                    ? `ВНИМАНИЕ: база достигла порога ${formatAdminNumber(400)} MB. Остаток до лимита: ${(remainingBytes / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB.`
-                    : `Использовано ${percentage.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}%. До порога предупреждения — ${(Math.max(0, 400000000 - bytes) / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} MB.`;
+                    ? `ВНИМАНИЕ: база достигла порога ${formatAdminNumber(400)} МБ. Остаток до лимита: ${(remainingBytes / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} МБ. ${measurementMethod}.`
+                    : `Использовано ${percentage.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}%. До порога предупреждения — ${(Math.max(0, 400000000 - bytes) / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} МБ. ${measurementMethod}.`;
             } else {
                 storageValue.textContent = 'Размер D1 недоступен';
                 storageStatus.classList.add('warning');
-                storageStatus.textContent = storage.error || 'Не удалось прочитать PRAGMA page_count/page_size.';
+                storageStatus.textContent = storage.error || 'Не удалось получить размер через dbstat или оценку данных таблиц.';
             }
 
             const limits = health.dailyLimits || {};
@@ -1012,6 +1015,7 @@
             document.getElementById('limitWorkerRequests').textContent = formatAdminNumber(limits.workerRequests || 100000);
 
             const indexes = (health.security && health.security.indexes) || {};
+            const rateLimits = (health.security && health.security.cacheRateLimits) || {};
             const requiredIndexes = [
                 ['chatCreatedAt', 'chat_messages(created_at)'],
                 ['chatSenderTarget', 'chat_messages(sender_id, target_id)'],
@@ -1023,10 +1027,19 @@
             const indexRow = document.getElementById('securityIndexes');
             indexRow.classList.toggle('warning', missingIndexes.length > 0);
             document.getElementById('securityIndexesState').textContent =
-                missingIndexes.length ? 'ТРЕБУЕТСЯ МИГРАЦИЯ' : 'ИНДЕКСЫ НАЙДЕНЫ';
+                missingIndexes.length ? 'ТРЕБУЕТСЯ МИГРАЦИЯ' : 'ЗАЩИЩЕНО';
             document.getElementById('securityIndexesDetail').textContent = missingIndexes.length
                 ? `Не найдены: ${missingIndexes.join(', ')}. Примените migrations/0006_security_and_indexes.sql к D1.`
                 : 'Все нужные индексы найдены. Они уменьшают чтения при выборке сообщений и проверке срока сессии.';
+
+            const rateLimitRow = document.getElementById('securityRateLimits');
+            const rateLimitsEnabled = rateLimits.enabled === true;
+            rateLimitRow.classList.toggle('warning', !rateLimitsEnabled);
+            document.getElementById('securityRateLimitsState').textContent =
+                rateLimitsEnabled ? 'ЗАЩИЩЕНО' : 'НЕТ CACHE API';
+            document.getElementById('securityRateLimitsDetail').textContent = rateLimitsEnabled
+                ? `Вход: ${rateLimits.auth.maxAttempts} попыток/5 мин/IP; AI: ${rateLimits.ai.maxMessages} сообщений/10 мин/IP; чат: ${rateLimits.chat.maxMessagesPerIp}/мин/IP и ID. Для объёмного DDoS дополнительно настройте Cloudflare WAF.`
+                : 'Cache API недоступен, поэтому лимитирование не работает. Проверьте Cloudflare Worker и настройте WAF Rate Limiting.';
 
             const security = health.security || {};
             const chatImageKb = Math.round((Number(security.chatImageMaxBytes) || 358400) / 1024);
@@ -1052,6 +1065,9 @@
                 document.getElementById('securityIndexesState').textContent = 'ПРОВЕРКА НЕ УДАЛАСЬ';
                 document.getElementById('securityIndexesDetail').textContent =
                     'Не удалось получить состояние индексов из /api/admin/system-health.';
+                document.getElementById('securityRateLimitsState').textContent = 'ПРОВЕРКА НЕ УДАЛАСЬ';
+                document.getElementById('securityRateLimitsDetail').textContent =
+                    'Не удалось проверить состояние Cache API rate limiting.';
             }
         }
 
@@ -1062,11 +1078,15 @@
                 else {
                     document.getElementById('securityIndexesState').textContent = 'ТРЕБУЕТСЯ ВХОД';
                     document.getElementById('securityIndexesDetail').textContent = 'Статусы индексов доступны только администратору.';
+                    document.getElementById('securityRateLimitsState').textContent = 'ТРЕБУЕТСЯ ВХОД';
+                    document.getElementById('securityRateLimitsDetail').textContent = 'Статус серверного rate limiting доступен только администратору.';
                 }
             });
         } else {
             document.getElementById('securityIndexesState').textContent = 'НЕТ СЕССИИ';
             document.getElementById('securityIndexesDetail').textContent = 'Проверка доступна только после входа администратора.';
+            document.getElementById('securityRateLimitsState').textContent = 'НЕТ СЕССИИ';
+            document.getElementById('securityRateLimitsDetail').textContent = 'Проверка доступна только после входа администратора.';
         }
     </script>
 </body>

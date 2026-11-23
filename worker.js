@@ -2,6 +2,12 @@ const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store",
 };
+const SECURITY_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "SAMEORIGIN",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+};
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -12,6 +18,69 @@ function jsonResponse(data, status = 200) {
 
 function errorResponse(message, status = 400) {
   return jsonResponse({ error: message }, status);
+}
+
+function rateLimitResponse(message, retryAfterSeconds) {
+  return new Response(JSON.stringify({ error: message }), {
+    status: 429,
+    headers: {
+      ...JSON_HEADERS,
+      "retry-after": String(retryAfterSeconds),
+    },
+  });
+}
+
+async function enforceCacheRateLimit(request, scope, identity, limit, windowSeconds, message) {
+  if (typeof caches === "undefined" || !caches.default) {
+    console.error("Cloudflare Cache API is unavailable for rate limiting.");
+    return errorResponse("Защита от частых запросов временно недоступна.", 503);
+  }
+
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const bucket = Math.floor(now / windowSeconds);
+    const retryAfterSeconds = Math.max(1, (bucket + 1) * windowSeconds - now);
+    const identityHash = (await digestBase64(`${scope}\n${identity}`))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+    const cacheUrl = new URL(
+      `/_worker-rate-limit/${scope}/${identityHash}/${bucket}`,
+      request.url,
+    );
+    const cacheKey = new Request(cacheUrl, { method: "GET" });
+    const cachedCount = await caches.default.match(cacheKey);
+    const count = cachedCount ? Number(await cachedCount.text()) : 0;
+    if (!Number.isSafeInteger(count) || count < 0) {
+      throw new Error("Invalid cached rate-limit counter.");
+    }
+    if (count >= limit) {
+      return rateLimitResponse(message, retryAfterSeconds);
+    }
+
+    await caches.default.put(cacheKey, new Response(String(count + 1), {
+      headers: {
+        "cache-control": `public, max-age=${retryAfterSeconds}`,
+        "content-type": "text/plain; charset=utf-8",
+      },
+    }));
+    return null;
+  } catch (error) {
+    console.error("Cloudflare Cache API rate limiting failed.", error);
+    return errorResponse("Защита от частых запросов временно недоступна.", 503);
+  }
+}
+
+function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    headers.set(name, value);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 async function readJson(request) {
@@ -167,9 +236,8 @@ async function getAuthSession(request, env) {
   return { id: result.id, email: result.email, role: result.role };
 }
 
-function sessionCookie(request, token, maxAge) {
-  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
-  return `${SESSION_COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+function sessionCookie(token, maxAge) {
+  return `${SESSION_COOKIE_NAME}=${token}; HttpOnly; Secure; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
 }
 
 function authJsonResponse(data, status, headers = {}) {
@@ -182,33 +250,6 @@ function authJsonResponse(data, status, headers = {}) {
 function isSameOriginRequest(request) {
   const origin = request.headers.get("origin");
   return origin === new URL(request.url).origin;
-}
-
-async function loginRateLimit(env, request, email) {
-  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-  const key = await digestBase64(`${ip}\n${email}`);
-  const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(
-    "DELETE FROM auth_login_attempts WHERE window_started_at <= ?",
-  ).bind(now - 900).run();
-  const current = await env.DB.prepare(
-    "SELECT attempts, window_started_at FROM auth_login_attempts WHERE attempt_key = ?",
-  ).bind(key).first();
-  if (current && current.window_started_at > now - 900 && current.attempts >= 10) {
-    return { key, limited: true };
-  }
-  if (!current || current.window_started_at <= now - 900) {
-    await env.DB.prepare(
-      `INSERT INTO auth_login_attempts (attempt_key, attempts, window_started_at)
-       VALUES (?, 1, ?)
-       ON CONFLICT(attempt_key) DO UPDATE SET attempts = 1, window_started_at = excluded.window_started_at`,
-    ).bind(key, now).run();
-  } else {
-    await env.DB.prepare(
-      "UPDATE auth_login_attempts SET attempts = attempts + 1 WHERE attempt_key = ?",
-    ).bind(key).run();
-  }
-  return { key, limited: false };
 }
 
 function newSessionToken() {
@@ -239,6 +280,9 @@ async function sendRecoveryEmail(env, email, code) {
 }
 
 async function handleAuth(request, env, pathname) {
+  if (pathname === "/api/auth/register") {
+    return errorResponse("Регистрация не поддерживается.", 405);
+  }
   await ensureSeedAccounts(env);
 
   if (pathname === "/api/auth/me") {
@@ -263,11 +307,6 @@ async function handleAuth(request, env, pathname) {
     }
 
     try {
-      const attempt = await loginRateLimit(env, request, email);
-      if (attempt.limited) {
-        return errorResponse("Слишком много попыток. Попробуйте через 15 минут.", 429);
-      }
-
       const user = await env.DB.prepare(
         "SELECT id, email, password_hash, role FROM users WHERE email = ?",
       ).bind(email).first();
@@ -277,8 +316,6 @@ async function handleAuth(request, env, pathname) {
         return errorResponse("Неверный адрес электронной почты или пароль.", 401);
       }
 
-      await env.DB.prepare("DELETE FROM auth_login_attempts WHERE attempt_key = ?")
-        .bind(attempt.key).run();
       const token = newSessionToken();
       const now = Math.floor(Date.now() / 1000);
       await env.DB.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").bind(now).run();
@@ -294,7 +331,7 @@ async function handleAuth(request, env, pathname) {
       return authJsonResponse(
         { user: { id: user.id, email: user.email, role: user.role } },
         200,
-        { "set-cookie": sessionCookie(request, token, SESSION_TTL_SECONDS) },
+        { "set-cookie": sessionCookie(token, SESSION_TTL_SECONDS) },
       );
     } catch (error) {
       console.error("Ошибка обработки входа.", error);
@@ -311,7 +348,7 @@ async function handleAuth(request, env, pathname) {
     return authJsonResponse(
       { status: "ok" },
       200,
-      { "set-cookie": sessionCookie(request, "", 0) },
+      { "set-cookie": sessionCookie("", 0) },
     );
   }
 
@@ -942,18 +979,24 @@ async function handleCoins(request, env, session) {
     const body = await readJson(request);
     if (!body) return errorResponse("Ожидается JSON-объект.");
 
-    const userId = typeof body.user_id === "string" ? body.user_id.trim() : "";
+    const requestedUserId = typeof body.user_id === "string" ? body.user_id.trim() : "";
+    if (requestedUserId && requestedUserId !== session.id) {
+      return errorResponse("Нельзя менять баланс другого пользователя.", 403);
+    }
+    const userId = session.id;
     const coins = body.coins;
     if (!userId || userId.length > 100 || !Number.isSafeInteger(coins) ||
         coins < 0 || coins > 1000000000) {
-      return errorResponse("Укажите user_id и целое число монет от 0 до 1000000000.");
+      return errorResponse("Укажите целое число монет от 0 до 1000000000.");
     }
 
     const updatedAt = Math.floor(Date.now() / 1000);
-    await env.DB.prepare(
-      `INSERT INTO users (id, coins, updated_at) VALUES (?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET coins = excluded.coins, updated_at = excluded.updated_at`,
-    ).bind(userId, coins, updatedAt).run();
+    const update = await env.DB.prepare(
+      "UPDATE users SET coins = ?, updated_at = ? WHERE id = ?",
+    ).bind(coins, updatedAt, userId).run();
+    if (!update.meta || !update.meta.changes) {
+      return errorResponse("Пользователь не найден.", 404);
+    }
 
     return jsonResponse({ user: { id: userId, coins, updated_at: updatedAt } });
   }
@@ -1284,6 +1327,34 @@ function normalizeSql(sql) {
     .replace(/[`"\[\]\s]/g, "");
 }
 
+async function estimateDatabaseSizeFromTables(env, tableNames) {
+  let totalBytes = 0;
+  for (const tableName of tableNames) {
+    const tableInfo = await env.DB.prepare(
+      `PRAGMA table_info(${quoteSqlIdentifier(tableName)})`,
+    ).all();
+    const columns = (tableInfo.results || []).map(column => String(column.name));
+    if (!columns.length) continue;
+
+    const sizeExpression = columns.map(column =>
+      `COALESCE(LENGTH(CAST(${quoteSqlIdentifier(column)} AS BLOB)), 0)`,
+    ).join(" + ");
+    const result = await env.DB.prepare(
+      `SELECT COALESCE(SUM(${sizeExpression}), 0) AS size
+       FROM ${quoteSqlIdentifier(tableName)}`,
+    ).first();
+    const tableBytes = Number(result && result.size);
+    if (!Number.isSafeInteger(tableBytes) || tableBytes < 0) {
+      throw new Error(`Invalid estimated size for table ${tableName}.`);
+    }
+    totalBytes += tableBytes;
+    if (!Number.isSafeInteger(totalBytes)) {
+      throw new Error("Estimated D1 size exceeds the safe integer range.");
+    }
+  }
+  return totalBytes;
+}
+
 async function handleAdminSystemHealth(request, env) {
   if (request.method !== "GET") {
     return errorResponse("Метод не поддерживается.", 405);
@@ -1309,20 +1380,28 @@ async function handleAdminSystemHealth(request, env) {
   }
 
   let databaseSizeBytes = null;
+  let databaseSizeMethod = null;
   let databaseSizeError = null;
   try {
-    const pageCountRow = await env.DB.prepare("PRAGMA page_count;").first();
-    const pageSizeRow = await env.DB.prepare("PRAGMA page_size;").first();
-    const pageCount = Number(pageCountRow && pageCountRow.page_count);
-    const pageSize = Number(pageSizeRow && pageSizeRow.page_size);
-    if (!Number.isSafeInteger(pageCount) || pageCount < 0 ||
-        !Number.isSafeInteger(pageSize) || pageSize <= 0) {
-      throw new Error("D1 returned invalid page metrics.");
+    const dbstatRow = await env.DB.prepare(
+      "SELECT SUM(pgsize) AS size FROM dbstat;",
+    ).first();
+    const dbstatSize = Number(dbstatRow && dbstatRow.size);
+    if (!dbstatRow || dbstatRow.size === null ||
+        !Number.isSafeInteger(dbstatSize) || dbstatSize < 0) {
+      throw new Error("D1 dbstat returned invalid size metrics.");
     }
-    databaseSizeBytes = pageCount * pageSize;
-  } catch (error) {
-    console.error("Не удалось получить размер D1 через PRAGMA.", error);
-    databaseSizeError = "PRAGMA page_count/page_size недоступны.";
+    databaseSizeBytes = dbstatSize;
+    databaseSizeMethod = "dbstat";
+  } catch (dbstatError) {
+    console.warn("D1 dbstat недоступен; оценивается объём данных таблиц.", dbstatError);
+    try {
+      databaseSizeBytes = await estimateDatabaseSizeFromTables(env, tableNames);
+      databaseSizeMethod = "table-data-estimate";
+    } catch (fallbackError) {
+      console.error("Не удалось оценить размер D1 по данным таблиц.", fallbackError);
+      databaseSizeError = "Недоступны dbstat и оценка объёма данных таблиц.";
+    }
   }
 
   const indexResult = await env.DB.prepare(
@@ -1347,12 +1426,16 @@ async function handleAdminSystemHealth(request, env) {
   const usagePercent = databaseSizeBytes === null
     ? null
     : Math.min(100, (databaseSizeBytes / D1_FREE_STORAGE_LIMIT_BYTES) * 100);
+  const cacheApiAvailable = typeof caches !== "undefined" && Boolean(caches.default);
 
   return jsonResponse({
     database: "Cloudflare D1 (SQLite)",
     storage: {
       sizeBytes: databaseSizeBytes,
+      sizeKb: databaseSizeBytes === null ? null : databaseSizeBytes / 1024,
       sizeMb: databaseSizeBytes === null ? null : databaseSizeBytes / 1_000_000,
+      method: databaseSizeMethod,
+      estimated: databaseSizeMethod === "table-data-estimate",
       freeLimitBytes: D1_FREE_STORAGE_LIMIT_BYTES,
       warningLimitBytes: D1_STORAGE_WARNING_BYTES,
       remainingBytes: databaseSizeBytes === null
@@ -1376,8 +1459,14 @@ async function handleAdminSystemHealth(request, env) {
       chatImageMaxBytes: MAX_CHAT_IMAGE_BYTES,
       siteImageMaxBytes: 262144,
       loginAttemptsPerWindow: 10,
-      loginWindowSeconds: 900,
-      aiRateLimitConfigured: false,
+      aiRateLimitConfigured: cacheApiAvailable,
+      loginWindowSeconds: 300,
+      cacheRateLimits: {
+        enabled: cacheApiAvailable,
+        auth: { maxAttempts: 10, windowSeconds: 300 },
+        ai: { maxMessages: 20, windowSeconds: 600 },
+        chat: { maxMessagesPerIp: 30, maxMessagesPerUser: 30, windowSeconds: 60 },
+      },
     },
   });
 }
@@ -1508,17 +1597,60 @@ async function handleAdminImages(request, env) {
   return errorResponse("Метод не поддерживается.", 405);
 }
 
-export default {
-  async fetch(request, env) {
+async function handleWorkerRequest(request, env) {
     const requestUrl = new URL(request.url);
     const { pathname } = requestUrl;
 
     try {
+      if (pathname.startsWith("/api/") &&
+          request.method !== "GET" &&
+          !isSameOriginRequest(request)) {
+        return errorResponse("Запрос с другого источника запрещён.", 403);
+      }
+
       if (pathname.startsWith("/api/auth/")) {
+        if (request.method === "POST" &&
+            ["/api/auth/login", "/api/auth/register"].includes(pathname)) {
+          const limited = await enforceCacheRateLimit(
+            request,
+            "auth",
+            request.headers.get("CF-Connecting-IP") || "unknown",
+            10,
+            300,
+            "Слишком много попыток входа, подождите 5 минут",
+          );
+          if (limited) return limited;
+        }
         return await handleAuth(request, env, pathname);
       }
 
       const isApiRequest = pathname.startsWith("/api/");
+      const isChatRoute = pathname === "/api/chat" || pathname.startsWith("/api/chat/");
+      const isAiRoute = pathname === "/api/yaga-chat" ||
+        pathname === "/api/ai" ||
+        pathname.startsWith("/api/ai/");
+      if (request.method === "POST" && isAiRoute) {
+        const limited = await enforceCacheRateLimit(
+          request,
+          "ai",
+          request.headers.get("CF-Connecting-IP") || "unknown",
+          20,
+          600,
+          "Слишком много сообщений в AI-чате. Подождите 10 минут.",
+        );
+        if (limited) return limited;
+      }
+      if (request.method === "POST" && isChatRoute) {
+        const limited = await enforceCacheRateLimit(
+          request,
+          "chat-ip",
+          request.headers.get("CF-Connecting-IP") || "unknown",
+          30,
+          60,
+          "Слишком много сообщений в чате. Подождите минуту.",
+        );
+        if (limited) return limited;
+      }
       const isHtmlPage =
         pathname === "/" ||
         (/\.html?$/i.test(pathname) && pathname !== "/login.html");
@@ -1530,6 +1662,9 @@ export default {
       if (isApiRequest || isProtectedResource) {
         session = await getAuthSession(request, env);
         if (!session) {
+          if (pathname === "/api/admin" || pathname.startsWith("/api/admin/")) {
+            return errorResponse("Требуются права администратора.", 403);
+          }
           if (isHtmlPage) {
             const loginUrl = new URL("/login.html", request.url);
             loginUrl.searchParams.set("next", `${pathname}${requestUrl.search}`);
@@ -1537,6 +1672,18 @@ export default {
           }
           return errorResponse("Требуется вход.", 401);
         }
+      }
+
+      if (request.method === "POST" && isChatRoute) {
+        const limited = await enforceCacheRateLimit(
+          request,
+          "chat-user",
+          session.id,
+          30,
+          60,
+          "Слишком много сообщений в чате. Подождите минуту.",
+        );
+        if (limited) return limited;
       }
 
       const adminOnly =
@@ -1551,10 +1698,6 @@ export default {
         }
         return errorResponse("Требуются права администратора.", 403);
       }
-      if (isApiRequest && request.method !== "GET" && !isSameOriginRequest(request)) {
-        return errorResponse("Запрос с другого источника запрещён.", 403);
-      }
-
       if (pathname === "/api/admin/export-db") {
         return await handleAdminDatabaseExport(request, env);
       }
@@ -1578,5 +1721,10 @@ export default {
       console.error("Worker request failed:", error);
       return errorResponse("Внутренняя ошибка сервера.", 500);
     }
+}
+
+export default {
+  async fetch(request, env) {
+    return withSecurityHeaders(await handleWorkerRequest(request, env));
   },
 };
