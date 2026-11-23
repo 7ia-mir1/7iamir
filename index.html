@@ -1243,7 +1243,8 @@
         }
 
         function restoreLocationFromUrlOnly() {
-            // При перезагрузке (pageshow) восстанавливаем ТОЛЬКО из URL параметров, НЕ из sessionStorage
+            // При перезагрузке (pageshow) восстанавливаем из URL параметров И из sessionStorage
+            // но НЕ переполняем на 'trud' - если нет явного параметра, восстанавливаем сохранённую локацию
             try {
                 const params = new URLSearchParams(window.location.search);
                 const g = params.get('gender');
@@ -1252,9 +1253,9 @@
                     const gBtn = document.getElementById('genderBtn');
                     if (gBtn) gBtn.innerText = userGender === 'man' ? "👤 Пол: Мужской" : "👤 Пол: Женский";
                 }
-                // При pageshow используем ТОЛЬКО URL параметры, не sessionStorage
+                // При pageshow используем URL параметры, и если их нет - sessionStorage fallback
                 const hashLoc = (window.location.hash || '').replace('#', '').trim();
-                const startLoc = params.get('loc') || params.get('location') || hashLoc;
+                const startLoc = params.get('loc') || params.get('location') || hashLoc || sessionStorage.getItem('GORNITSA_LAST_LOC');
                 if (startLoc && defaultZoneCoords[startLoc]) {
                     currentLoc = startLoc;
                 }

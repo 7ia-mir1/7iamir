@@ -3131,20 +3131,22 @@
       });
       if (!response.ok) {
         if (response.status === 401) {
-          console.log('[Chat] User not authorized');
-          return null;
+          console.log('[Chat] User not authorized (401)');
+          return { error: 'Ошибка 401: Нет доступа' };
         }
-        throw new Error(`HTTP ${response.status}`);
+        console.log(`[Chat] API error: HTTP ${response.status}`);
+        return { error: `Ошибка ${response.status}` };
       }
       const data = await response.json();
       if (data.user && typeof data.user.id === 'string') {
         console.log(`[Chat] ID from API: ${data.user.id}`);
-        return data.user.id;
+        return { id: data.user.id };
       }
+      return { error: 'Некорректный ответ сервера' };
     } catch (error) {
       console.error('[Chat] Failed to fetch ID from API:', error.message);
+      return { error: `Ошибка: ${error.message}` };
     }
-    return null;
   }
 
   // Инициализация ID пользователя
@@ -3158,7 +3160,7 @@
       myId = id;
       STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
       console.log(`[Chat] ✓ User ID initialized from parent window: ${myId}`);
-      return true;
+      return { success: true, id: myId };
     }
     
     // 2. Если не получилось, пытаемся из localStorage/sessionStorage
@@ -3168,22 +3170,22 @@
       myId = id;
       STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
       console.log(`[Chat] ✓ User ID initialized from localStorage: ${myId}`);
-      return true;
+      return { success: true, id: myId };
     }
     
     // 3. Если еще не получилось, запрашиваем через API
     console.log('[Chat] Step 3: Fetching from API /api/auth/me...');
-    id = await fetchIdFromAPI();
-    if (id) {
-      myId = id;
+    const result = await fetchIdFromAPI();
+    if (result.id) {
+      myId = result.id;
       STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
       console.log(`[Chat] ✓ User ID initialized from API: ${myId}`);
-      return true;
+      return { success: true, id: myId };
     }
     
     // 4. Не получилось ни одним способом
     console.error('[Chat] ✗ Could not determine user ID after trying all methods');
-    return false;
+    return { success: false, error: result.error || 'Не удалось получить ID' };
   }
 
   // Отображение ID пользователя (или сообщения об ошибке)
@@ -3193,14 +3195,14 @@
     
     myIdBadgeEl.textContent = 'Ваш ID: загрузка...';
     
-    const success = await initializeUserId();
+    const result = await initializeUserId();
     
-    if (success) {
+    if (result.success) {
       myIdBadgeEl.textContent = `Ваш ID: ${myId}`;
       myIdBadgeEl.style.color = '';
       return true;
     } else {
-      myIdBadgeEl.textContent = 'Войдите в аккаунт';
+      myIdBadgeEl.textContent = result.error || 'Войдите в аккаунт';
       myIdBadgeEl.style.color = '#dc2626';
       return false;
     }
@@ -3357,7 +3359,13 @@
         credentials: 'same-origin',
         cache: 'no-store',
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorText = `HTTP ${response.status}`;
+        if (response.status === 401) {
+          throw new Error('Нет доступа (401): требуется авторизация');
+        }
+        throw new Error(errorText);
+      }
       const result = await response.json();
       console.log(`[Chat] ✓ Presence API returned ${result.users?.length || 0} users:`, result.users);
       if (!Array.isArray(result.users)) throw new Error('Некорректный ответ API присутствия');
@@ -3401,7 +3409,7 @@
     } catch (error) {
       const onlineCountLabel = document.getElementById('onlineCountLabel');
       if (onlineCountLabel) {
-        onlineCountLabel.textContent = 'Нет связи с сервером';
+        onlineCountLabel.textContent = error.message;
         onlineCountLabel.title = error.message;
       }
       if (Date.now() - lastPresenceErrorAt > 30000) {
@@ -3447,8 +3455,8 @@
       // Запускаем попытку загрузить ID через API каждые 10 секунд
       window.setInterval(async () => {
         const result = await fetchIdFromAPI();
-        if (result && !myId) {
-          myId = result;
+        if (result.id && !myId) {
+          myId = result.id;
           STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
           const badge = document.getElementById('myIdBadge');
           if (badge) badge.textContent = `Ваш ID: ${myId}`;
