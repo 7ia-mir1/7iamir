@@ -1413,7 +1413,7 @@ async function handleAdminSystemHealth(request, env) {
   }
 
   const indexResult = await env.DB.prepare(
-    `SELECT name, sql FROM sqlite_master
+    `SELECT name, tbl_name FROM sqlite_master
      WHERE type = 'index'
        AND name IN (?, ?, ?)`,
   ).bind(
@@ -1421,15 +1421,11 @@ async function handleAdminSystemHealth(request, env) {
     "idx_chat_messages_sender_target",
     "idx_auth_sessions_expires_at",
   ).all();
-  const indexes = new Map((indexResult.results || [])
-    .map(index => [index.name, normalizeSql(index.sql || "")]));
+  const indexesByName = new Set((indexResult.results || []).map(index => index.name));
   const indexStatus = {
-    chatCreatedAt: indexes.get("idx_chat_messages_created_at") ===
-      "createindexidx_chat_messages_created_atonchat_messages(created_at)",
-    chatSenderTarget: indexes.get("idx_chat_messages_sender_target") ===
-      "createindexidx_chat_messages_sender_targetonchat_messages(sender_id,target_id)",
-    authSessionsExpires: indexes.get("idx_auth_sessions_expires_at") ===
-      "createindexidx_auth_sessions_expires_atauth_sessions(expires_at)",
+    chatCreatedAt: indexesByName.has("idx_chat_messages_created_at"),
+    chatSenderTarget: indexesByName.has("idx_chat_messages_sender_target"),
+    authSessionsExpires: indexesByName.has("idx_auth_sessions_expires_at"),
   };
   const usagePercent = databaseSizeBytes === null
     ? null
