@@ -2852,6 +2852,31 @@
     border-left-color: #ffd700;
   }
 
+  /* Принудительный стиль ДЛЯ ВСЕХ сообщений с !important */
+  .msg-bubble {
+    background: #FFD700 !important;
+    border: 1px solid #FFD700 !important;
+  }
+
+  .msg-text {
+    color: #000000 !important;
+    font-weight: 700 !important;
+    font-size: 24px !important;
+    line-height: 1.3 !important;
+  }
+
+  .msg-header {
+    color: #000000 !important;
+  }
+
+  .msg-sender-id {
+    color: #000000 !important;
+  }
+
+  .message-row.mine .msg-bubble {
+    background: #FFD700 !important;
+  }
+
 </style>
 </head>
 <body>
@@ -3233,6 +3258,7 @@
   ];
   let selectedTargetId = 'ALL';
   let isSupremeChatSelected = false;
+  let handlersInitialized = false;
 
   let messages = [];
 
@@ -3574,10 +3600,6 @@
       if (supremeChatBtn) {
         supremeChatBtn.disabled = myId === '1003';
         supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
-        // Удаляем старые обработчики, если они были
-        const newBtn = supremeChatBtn.cloneNode(true);
-        supremeChatBtn.parentNode.replaceChild(newBtn, supremeChatBtn);
-        newBtn.addEventListener('click', () => openDirectChat('1003', true));
         console.log(`[Chat] ✓ initializeSupremeButton: supremeChatBtn is ready (myId=${myId})`);
       } else {
         console.warn('[Chat] ✗ initializeSupremeButton: supremeChatBtn not found');
@@ -3588,6 +3610,12 @@
   }
 
   function initializeButtonHandlers() {
+    if (handlersInitialized) {
+      console.log('[Chat] Button handlers already initialized, skipping');
+      return;
+    }
+    handlersInitialized = true;
+
     if (generalChatBtn) {
       generalChatBtn.addEventListener('click', () => {
         selectedTargetId = 'ALL';
@@ -3603,6 +3631,17 @@
       blocksBtn.addEventListener('click', openBlocksModal);
     }
 
+    if (supremeChatBtn) {
+      supremeChatBtn.addEventListener('click', () => {
+        selectedTargetId = '1003';
+        isSupremeChatSelected = true;
+        renderOnlineList();
+        updateRoomHeader();
+        messagesAreaEl.innerHTML = '';
+        renderMessages({ forceScrollBottom: true });
+      });
+    }
+
     if (policeBtn) {
       policeBtn.addEventListener('click', () => {
         selectedTargetId = '1002';
@@ -3613,6 +3652,8 @@
         renderMessages({ forceScrollBottom: true });
       });
     }
+
+    console.log('[Chat] ✓ Button handlers initialized');
   }
 
   // Функция загрузки блокировок и рендеринга списка онлайна
