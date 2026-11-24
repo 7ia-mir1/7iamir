@@ -3475,7 +3475,7 @@
       `;
       item.addEventListener('click', () => {
         selectedTargetId = u.id;
-        selectedRoomType = 'private';
+        selectedRoomType = 'private'console.warn('Сервер чата недоступен; сообщение оставлено в локальной истории:', error);;
         isSupremeChatSelected = false;
         markChatAsRead('private', u.id);
         closeBlocksModal();
@@ -3821,19 +3821,7 @@ if (supremeChatBtn) {
       });
     }
 
-    if (policeBtn) {
-      policeBtn.addEventListener('click', () => {
-        selectedTargetId = '1002';
-        selectedRoomType = 'police';
-        isSupremeChatSelected = false;
-        closeBlocksModal();
-        renderOnlineList();
-        updateRoomHeader();
-        messagesAreaEl.innerHTML = '';
-        renderMessages({ forceScrollBottom: true });
-        saveChatState();
-      });
-    }
+    selectedTargetId = supremeUserId || '1003';
 
     console.log('[Chat] ✓ Button handlers initialized');
   }
@@ -4143,10 +4131,26 @@ if (supremeChatBtn) {
       if (m.deletedForMe) return false;
       const senderId = String(m.senderId);
       const targetId = String(m.targetId);
-      if (selectedTargetId === 'ALL') return targetId === 'ALL';
-      if (selectedRoomType === 'supreme' ? m.channel !== 'supreme' : m.channel === 'supreme') return false;
+
+
+if (selectedRoomType === 'public') return targetId === 'ALL';
+      if (selectedRoomType === 'supreme') {
+        if (m.channel !== 'supreme') return false;
+        if (myId === supremeUserId && (!selectedTargetId || selectedTargetId === myId)) return true;
+      } else if (m.channel === 'supreme') {
+        return false;
+      }
+      if (selectedRoomType === 'police') {
+        if (m.channel !== 'police') return false;
+        if (myId === supremeUserId) return true;
+      } else if (m.channel === 'police') {
+        return false;
+      }
       return (senderId === selectedTargetId && targetId === myId) ||
              (senderId === myId && targetId === selectedTargetId);
+
+
+
     });
     visibleMessages.sort((a, b) => a.createdAt - b.createdAt);
 
@@ -4221,8 +4225,8 @@ if (supremeChatBtn) {
       }
       actions.appendChild(timer);
 
-      // Кнопка "Ответить" в общем чате
-      if (selectedTargetId === 'ALL' && !isMine) {
+// Кнопка "Ответить" в общем чате, Верховном и Полиции
+      if ((selectedRoomType === 'public' || selectedRoomType === 'supreme' || selectedRoomType === 'police') && !isMine) {
         const replyBtn = document.createElement('button');
         replyBtn.type = 'button';
         replyBtn.className = 'btn-reply-message';
@@ -4259,13 +4263,15 @@ if (supremeChatBtn) {
       deleteForMe.addEventListener('click', () => window.deleteMessage(msg.id, 'me'));
       actions.appendChild(deleteForMe);
 
-      const deleteForBoth = document.createElement('button');
-      deleteForBoth.type = 'button';
-      deleteForBoth.className = 'btn-delete-msg';
-      deleteForBoth.title = 'Стереть у себя и у собеседника';
-      deleteForBoth.textContent = 'Стереть у обоих';
-      deleteForBoth.addEventListener('click', () => window.deleteMessage(msg.id, 'both'));
-      actions.appendChild(deleteForBoth);
+      if (selectedRoomType !== 'public') {
+        const deleteForBoth = document.createElement('button');
+        deleteForBoth.type = 'button';
+        deleteForBoth.className = 'btn-delete-msg';
+        deleteForBoth.title = 'Стереть у себя и у собеседника';
+        deleteForBoth.textContent = 'Стереть у обоих';
+        deleteForBoth.addEventListener('click', () => window.deleteMessage(msg.id, 'both'));
+        actions.appendChild(deleteForBoth);
+      }
 
       bubble.appendChild(actions);
       row.appendChild(bubble);
