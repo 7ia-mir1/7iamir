@@ -609,7 +609,12 @@
         }
 
         function switchLocation(loc) {
+            sessionStorage.removeItem('GORNITSA_ROAD_STATE');
             if (loc === 'ozero') {
+                sessionStorage.removeItem('GORNITSA_INDEX_MODAL');
+                sessionStorage.removeItem('GORNITSA_BOOK_PAGE');
+                sessionStorage.removeItem('GORNITSA_BOOK_TOC');
+                sessionStorage.removeItem('GORNITSA_BOOK_PROMPT');
                 initializeOzeroScene();
                 return;
             }
@@ -662,6 +667,7 @@
                 document.getElementById('modalText').innerText = window.GornitsaContent.text(text, text);
                 document.getElementById('modalChoices').replaceChildren();
                 document.getElementById('infoModal').classList.add('active');
+                sessionStorage.setItem('GORNITSA_INDEX_MODAL', JSON.stringify({ type: 'info', title, text }));
             });
         }
 
@@ -684,6 +690,7 @@
                     container.appendChild(btn);
                 });
                 document.getElementById('infoModal').classList.add('active');
+                sessionStorage.setItem('GORNITSA_INDEX_MODAL', JSON.stringify({ type: 'choice', title }));
             });
         }
 
@@ -694,6 +701,7 @@
             }
             document.getElementById('infoModal').classList.remove('active');
             document.getElementById('modalChoices').innerHTML = '';
+            sessionStorage.removeItem('GORNITSA_INDEX_MODAL');
         }
 
         function getRoadKey(baseRoadName) {
@@ -1207,9 +1215,12 @@
             }
         });
 
-        function startRoadTravel(roadKey, targetLoc) {
+        function startRoadTravel(roadKey, targetLoc, duration = 4000) {
             if (travelTimer) clearTimeout(travelTimer);
             currentLoc = roadKey;
+            sessionStorage.setItem('GORNITSA_ROAD_STATE', JSON.stringify({
+                roadKey, targetLoc, endsAt: Date.now() + duration
+            }));
             if (window.GornitsaMedia && typeof GornitsaMedia.onLocationChange === 'function') {
                 GornitsaMedia.onLocationChange(roadKey);
             }
@@ -1217,7 +1228,7 @@
             updateNavHighlight();
             travelTimer = setTimeout(() => {
                 switchLocation(targetLoc);
-            }, 4000);
+            }, duration);
         }
 
         function restoreLocationFromUrlOrHistory() {
@@ -1230,7 +1241,10 @@
                     if (gBtn) gBtn.innerText = userGender === 'man' ? "👤 Пол: Мужской" : "👤 Пол: Женский";
                 }
                 const hashLoc = (window.location.hash || '').replace('#', '').trim();
-                const startLoc = params.get('loc') || params.get('location') || hashLoc || sessionStorage.getItem('GORNITSA_LAST_LOC');
+                const navigation = performance.getEntriesByType('navigation')[0];
+                const savedLoc = sessionStorage.getItem('GORNITSA_LAST_LOC');
+                const startLoc = (navigation && navigation.type === 'reload' && savedLoc) ||
+                    params.get('loc') || params.get('location') || hashLoc || savedLoc;
                 if (startLoc && defaultZoneCoords[startLoc]) {
                     currentLoc = startLoc;
                 }
@@ -1255,7 +1269,10 @@
                 }
                 // При pageshow используем URL параметры, и если их нет - sessionStorage fallback
                 const hashLoc = (window.location.hash || '').replace('#', '').trim();
-                const startLoc = params.get('loc') || params.get('location') || hashLoc || sessionStorage.getItem('GORNITSA_LAST_LOC');
+                const navigation = performance.getEntriesByType('navigation')[0];
+                const savedLoc = sessionStorage.getItem('GORNITSA_LAST_LOC');
+                const startLoc = (navigation && navigation.type === 'reload' && savedLoc) ||
+                    params.get('loc') || params.get('location') || hashLoc || savedLoc;
                 if (startLoc && defaultZoneCoords[startLoc]) {
                     currentLoc = startLoc;
                 }
@@ -1271,6 +1288,24 @@
         window.addEventListener('pageshow', () => {
             resizeCanvas();
             restoreLocationFromUrlOnly(); // ← Используем функцию БЕЗ sessionStorage fallback
+            const navigation = performance.getEntriesByType('navigation')[0];
+            if (navigation && navigation.type === 'reload') {
+                try {
+                    const raw = sessionStorage.getItem('GORNITSA_ROAD_STATE');
+                    if (raw) {
+                        const road = JSON.parse(raw);
+                        if (images[road.roadKey] && defaultZoneCoords[road.targetLoc]) {
+                            const remaining = Math.max(0, road.endsAt - Date.now());
+                            if (remaining > 0) startRoadTravel(road.roadKey, road.targetLoc, remaining);
+                            else switchLocation(road.targetLoc);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Не удалось восстановить дорогу:', error);
+                }
+            } else {
+                sessionStorage.removeItem('GORNITSA_ROAD_STATE');
+            }
         });
         window.addEventListener('focus', () => {
             resizeCanvas();
@@ -1811,15 +1846,21 @@
             renderBookPage(currentBookPage);
             updateBookmarkUI();
             document.getElementById('magicBookOverlay').classList.add('active');
+            sessionStorage.setItem('GORNITSA_BOOK_PAGE', String(currentBookPage));
         }
 
         function closeMagicBook() {
             document.getElementById('magicBookOverlay').classList.remove('active');
             closeSeparateTOC();
+            sessionStorage.removeItem('GORNITSA_BOOK_PAGE');
+            sessionStorage.removeItem('GORNITSA_BOOK_PROMPT');
         }
 
         function renderBookPage(pageNum) {
             currentBookPage = Math.max(1, Math.min(BOOK_PAGES.length, pageNum));
+            if (document.getElementById('magicBookOverlay').classList.contains('active')) {
+                sessionStorage.setItem('GORNITSA_BOOK_PAGE', String(currentBookPage));
+            }
             const pageObj = BOOK_PAGES[currentBookPage - 1];
             const contentEl = document.getElementById('bookPageContent');
             contentEl.replaceChildren(sanitizeBookHtml(pageObj.h));
@@ -1855,10 +1896,12 @@
             document.getElementById('tocSearchInput').value = '';
             renderTocList('');
             document.getElementById('separateTocOverlay').classList.add('active');
+            sessionStorage.setItem('GORNITSA_BOOK_TOC', '1');
         }
 
         function closeSeparateTOC() {
             document.getElementById('separateTocOverlay').classList.remove('active');
+            sessionStorage.removeItem('GORNITSA_BOOK_TOC');
         }
 
         function renderTocList(filterText) {
@@ -1891,10 +1934,12 @@
             document.getElementById('bookmarkPromptText').innerText =
                 `Вы открыли раздел «${pendingBookmarkTitle}» (Стр. ${pageNum}). Запомнить эту страницу?`;
             document.getElementById('bookmarkPromptOverlay').classList.add('active');
+            sessionStorage.setItem('GORNITSA_BOOK_PROMPT', JSON.stringify({ page: pageNum, title: pendingBookmarkTitle }));
         }
 
         function confirmRememberPage(shouldSave) {
             document.getElementById('bookmarkPromptOverlay').classList.remove('active');
+            sessionStorage.removeItem('GORNITSA_BOOK_PROMPT');
             if (shouldSave && pendingBookmarkPage) {
                 try {
                     localStorage.setItem('gornitsa_magic_book_bookmark', JSON.stringify({
@@ -2133,6 +2178,9 @@
             box.style.width = '';
             box.style.height = '';
             box.classList.toggle('windowed', windowed);
+            if (document.getElementById('onlineChatModalOverlay').classList.contains('active')) {
+                sessionStorage.setItem('GORNITSA_CHAT_WINDOWED', String(windowed));
+            }
 
             const icon = toggleBtn.querySelector('.online-chat-control-icon');
             const tooltip = toggleBtn.querySelector('.online-chat-control-tooltip');
@@ -2163,6 +2211,8 @@
             }
             if (ov) {
                 ov.classList.add('active');
+                sessionStorage.setItem('GORNITSA_CHAT_OPEN', '1');
+                sessionStorage.setItem('GORNITSA_CHAT_WINDOWED', 'false');
             }
         }
         function closeOnlineChatModal() {
@@ -2170,6 +2220,8 @@
             setOnlineChatWindowed(false);
             if (ov) {
                 ov.classList.remove('active');
+                sessionStorage.removeItem('GORNITSA_CHAT_OPEN');
+                sessionStorage.removeItem('GORNITSA_CHAT_WINDOWED');
             }
         }
 
@@ -2277,6 +2329,64 @@
         })();
 
         setOnlineChatWindowed(false);
+        const chatNavigation = performance.getEntriesByType('navigation')[0];
+        if (chatNavigation && chatNavigation.type === 'reload' && sessionStorage.getItem('GORNITSA_CHAT_OPEN') === '1') {
+            const windowed = sessionStorage.getItem('GORNITSA_CHAT_WINDOWED') === 'true';
+            openOnlineChatModal();
+            if (windowed) setOnlineChatWindowed(true);
+        }
+        window.addEventListener('pageshow', () => {
+        if (chatNavigation && chatNavigation.type === 'reload') {
+            if (sessionStorage.getItem('GORNITSA_PURSE_OPEN') === '1' && window.GornitsaWallet) {
+                window.GornitsaWallet.openTablePurseModal();
+            }
+            const mediaRaw = sessionStorage.getItem('GORNITSA_MEDIA_WINDOW');
+            if (mediaRaw && window.GornitsaMedia) {
+                try {
+                    const mediaState = JSON.parse(mediaRaw);
+                    if (typeof mediaState.category === 'string' && Number.isInteger(mediaState.index)) {
+                        window.GornitsaMedia.openPlayerModal(mediaState.category, mediaState.index);
+                    }
+                } catch (error) {
+                    console.error('Не удалось восстановить медиаплеер:', error);
+                }
+            }
+            const modalRaw = sessionStorage.getItem('GORNITSA_INDEX_MODAL');
+            if (modalRaw) {
+                try {
+                    const modalState = JSON.parse(modalRaw);
+                    if (modalState.type === 'info') {
+                        showModal(modalState.title, modalState.text);
+                    } else if (modalState.type === 'choice') {
+                        const choices = {
+                            'choice.title.07': ['izba', 'izba_chess'],
+                            'choice.title.12': ['ploshad', 'pl_telega'],
+                            'choice.title.19': ['ozero', 'oz_telega'],
+                            'choice.title.21': ['yaga', 'yaga_telega_zone']
+                        };
+                        const choice = choices[modalState.title];
+                        const zone = choice && defaultZoneCoords[choice[0]].find(item => item.id === choice[1]);
+                        if (zone) zone.action();
+                    }
+                } catch (error) {
+                    console.error('Не удалось восстановить окно сцены:', error);
+                }
+            }
+            const bookPage = Number(sessionStorage.getItem('GORNITSA_BOOK_PAGE'));
+            if (bookPage > 0) {
+                const tocOpen = sessionStorage.getItem('GORNITSA_BOOK_TOC') === '1';
+                const promptRaw = sessionStorage.getItem('GORNITSA_BOOK_PROMPT');
+                openMagicBook().then(async () => {
+                    renderBookPage(bookPage);
+                    if (tocOpen) await openSeparateTOC();
+                    if (promptRaw) {
+                        const prompt = JSON.parse(promptRaw);
+                        askRememberPage(prompt.page, prompt.title);
+                    }
+                }).catch(error => console.error('Не удалось восстановить книгу:', error));
+            }
+        }
+        });
 
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {

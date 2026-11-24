@@ -516,6 +516,14 @@ async function handlePresence(request, env, session) {
        ORDER BY users.id`,
     ).bind(session.id, now - PRESENCE_TTL_SECONDS, now).all();
 
+    const admins = await env.DB.prepare(
+      "SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 2",
+    ).all();
+    const supremeUserId = admins.results.length === 1 ? admins.results[0].id : null;
+    if (!supremeUserId) {
+      console.error("[Presence] Cannot determine a unique supreme account");
+    }
+
     const users = (result.results || []).map(user => ({
       id: user.id,
       role: user.role,
@@ -526,6 +534,7 @@ async function handlePresence(request, env, session) {
     return jsonResponse({
       users,
       online_count: users.length + 1,
+      supreme_user_id: supremeUserId,
     });
   } catch (err) {
     console.error("Error fetching online users:", err);
@@ -624,15 +633,12 @@ async function handleChat(request, env, session) {
         ? body.delete_scope
         : "off";
     
-    // Определяем канал на основе targetId
-    let channel = 'private';
-    if (targetId === 'ALL') {
-      channel = 'public';
-    } else if (targetId === '1002') {
-      channel = 'police';
-    } else if (targetId === '1003') {
-      channel = 'supreme';
+    const requestedChannel = body.channel == null ? (targetId === "ALL" ? "public" : "private") : body.channel;
+    if (!["public", "private", "supreme", "police"].includes(requestedChannel) ||
+        (targetId === "ALL") !== (requestedChannel === "public")) {
+      return errorResponse("Некорректный канал сообщения.");
     }
+    const channel = requestedChannel;
     
     const payloadBytes = new TextEncoder().encode(
       `${text}${imageDataUrl || ""}${fileDataUrl || ""}${fileName || ""}${fileSizeFormatted || ""}`,
@@ -684,6 +690,15 @@ async function handleChat(request, env, session) {
         "SELECT id FROM users WHERE id = ?",
       ).bind(targetId).first();
       if (!recipient) return errorResponse("Аккаунт собеседника не найден.", 404);
+      if (channel === "supreme") {
+        const admins = await env.DB.prepare(
+          "SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 2",
+        ).all();
+        if (admins.results.length !== 1 ||
+            (admins.results[0].id !== senderId && admins.results[0].id !== targetId)) {
+          return errorResponse("Служебный чат Верховного недоступен для этого собеседника.", 403);
+        }
+      }
     }
 
     const createdAt = Math.floor(Date.now() / 1000);

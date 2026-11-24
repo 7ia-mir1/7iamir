@@ -263,6 +263,23 @@
                 localStorage.setItem('GORNITSA_DIAG_ARCHIVE_V1', JSON.stringify(list));
             } catch (e) {}
 
+            try {
+                sessionStorage.setItem('GORNITSA_DIAG_RESULT', JSON.stringify(record));
+            } catch (error) {
+                console.error('Не удалось сохранить результат диагностики для перезагрузки:', error);
+            }
+            renderDiagnosticResult(record);
+        }
+
+        function renderDiagnosticResult(record) {
+            const { b1, z1, an1, blood1, num1, b2, z2, an2, blood2, num2, bloodHarmony, charSummary } = record;
+            const escapeName = value => {
+                const element = document.createElement('span');
+                element.textContent = String(value);
+                return element.innerHTML;
+            };
+            const name1 = escapeName(record.name1);
+            const name2 = escapeName(record.name2);
             const box = document.getElementById('diagResultBox');
             box.style.display = 'block';
             box.innerHTML = `
@@ -275,6 +292,26 @@
                 <p><strong>3. Годовой и Зодиакальный вектор:</strong> Сочетание «${z1} (${an1})» и «${z2} (${an2})» сохранено в летописи для детального разбора по 14 уровням Волшебной Книги.</p>
                 <p style="color:#1f5c33; font-weight:bold; margin-top:14px;">✅ Запись успешно помещена в Сундук (Архив диагностик у Озера)!</p>
             `;
+        }
+        const diagnosticNavigation = performance.getEntriesByType('navigation')[0];
+        if (diagnosticNavigation && diagnosticNavigation.type === 'reload') {
+            try {
+                const saved = sessionStorage.getItem('GORNITSA_DIAG_RESULT');
+                if (saved) {
+                    const record = JSON.parse(saved);
+                    renderDiagnosticResult(record);
+                    document.getElementById('p1Name').value = record.name1;
+                    document.getElementById('p1Birth').value = record.b1;
+                    document.getElementById('p1Blood').value = String(record.blood1);
+                    document.getElementById('p2Name').value = record.name2;
+                    document.getElementById('p2Birth').value = record.b2;
+                    document.getElementById('p2Blood').value = String(record.blood2);
+                }
+            } catch (error) {
+                console.error('Не удалось восстановить результат диагностики:', error);
+            }
+        } else {
+            sessionStorage.removeItem('GORNITSA_DIAG_RESULT');
         }
     </script>
     <script src="auth.js"></script>

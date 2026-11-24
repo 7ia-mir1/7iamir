@@ -366,18 +366,24 @@
 
             overlay.appendChild(box);
             document.body.appendChild(overlay);
+            sessionStorage.setItem('GORNITSA_PURSE_OPEN', '1');
 
             overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) overlay.remove();
+                if (e.target === overlay) {
+                    sessionStorage.removeItem('GORNITSA_PURSE_OPEN');
+                    overlay.remove();
+                }
             });
 
             document.getElementById('purseBtnYes').onclick = () => {
                 this.setWalletTaken(true);
+                sessionStorage.removeItem('GORNITSA_PURSE_OPEN');
                 overlay.remove();
             };
 
             document.getElementById('purseBtnNo').onclick = () => {
                 this.setWalletTaken(false);
+                sessionStorage.removeItem('GORNITSA_PURSE_OPEN');
                 overlay.remove();
             };
         },

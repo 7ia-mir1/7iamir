@@ -363,7 +363,16 @@
             renderGypsyHeader();
             localStorage.setItem(GYPSY_VISITED_KEY, 'true');
             document.getElementById('gildBtn').style.display = 'none';
+            try {
+                sessionStorage.setItem('GORNITSA_GYPSY_RESULT_OPEN', '1');
+            } catch (error) {
+                console.error('Не удалось сохранить экран результата для перезагрузки:', error);
+            }
+            showGypsyCard();
+        }
 
+        function showGypsyCard() {
+            const cardBox = document.getElementById('soulmateCard');
             const soulmateYear = '........';
             const soulmateDay = '........';
             const soulmateMonth = '......';
@@ -403,7 +412,14 @@
 
         renderGypsyHeader();
         loadGypsyPortraitFromPloshad();
-        checkSecondVisitOnLoad();
+        const gypsyNavigation = performance.getEntriesByType('navigation')[0];
+        if (gypsyNavigation && gypsyNavigation.type === 'reload' && sessionStorage.getItem('GORNITSA_GYPSY_RESULT_OPEN') === '1') {
+            document.getElementById('gildBtn').style.display = 'none';
+            showGypsyCard();
+        } else {
+            sessionStorage.removeItem('GORNITSA_GYPSY_RESULT_OPEN');
+            checkSecondVisitOnLoad();
+        }
     </script>
     <script src="auth.js"></script>
 </body>

@@ -123,8 +123,13 @@
     <script>
         (function verifyChestFeeOnOpen() {
             const paidFromLake = sessionStorage.getItem('GORNITSA_ARCHIVE_PAID_SESSION');
+            const navigation = performance.getEntriesByType('navigation')[0];
+            if (navigation && navigation.type === 'reload' && sessionStorage.getItem('GORNITSA_ARCHIVE_OPEN') === '1') {
+                return;
+            }
             if (paidFromLake === '1') {
                 sessionStorage.removeItem('GORNITSA_ARCHIVE_PAID_SESSION');
+                sessionStorage.setItem('GORNITSA_ARCHIVE_OPEN', '1');
                 return;
             }
             if (window.GornitsaWallet && typeof GornitsaWallet.payCash === 'function') {
@@ -132,12 +137,15 @@
                 if (!res.ok) {
                     alert(res.msg || 'Для открытия Сундука требуется 2 монеты в кошельке!');
                     sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.replace('index.html?loc=ozero#ozero');
+                    return;
                 }
+                sessionStorage.setItem('GORNITSA_ARCHIVE_OPEN', '1');
             }
         })();
 
         function closeChestAndReturn() {
             sessionStorage.removeItem('GORNITSA_ARCHIVE_PAID_SESSION');
+            sessionStorage.removeItem('GORNITSA_ARCHIVE_OPEN');
             sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero'); window.location.replace('index.html?loc=ozero#ozero');
         }
 

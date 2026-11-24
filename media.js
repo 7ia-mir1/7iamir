@@ -891,6 +891,7 @@
                 const modal = document.getElementById('gornitsaMediaModal');
                 if (modal && this.activeCategory !== 'cinema') {
                     modal.remove();
+                    sessionStorage.removeItem('GORNITSA_MEDIA_WINDOW');
                 }
             }
         },
@@ -1045,6 +1046,9 @@
             } else {
                 this.activeIndex = enabled.length > 0 ? enabled[0] : 0;
             }
+            sessionStorage.setItem('GORNITSA_MEDIA_WINDOW', JSON.stringify({
+                category: this.activeCategory, index: this.activeIndex
+            }));
 
             let existing = document.getElementById('gornitsaMediaModal');
             if (existing) existing.remove();
@@ -1151,6 +1155,7 @@
                         document.exitFullscreen().catch(() => {});
                     }
                     overlay.remove();
+                    sessionStorage.removeItem('GORNITSA_MEDIA_WINDOW');
                     this.startBackgroundMusic(cat, idx);
                 };
             }
@@ -1194,6 +1199,7 @@
                     document.exitFullscreen().catch(() => {});
                 }
                 overlay.remove();
+                sessionStorage.removeItem('GORNITSA_MEDIA_WINDOW');
             };
 
             overlay.addEventListener('click', (e) => {
@@ -1203,6 +1209,7 @@
                         document.exitFullscreen().catch(() => {});
                     }
                     overlay.remove();
+                    sessionStorage.removeItem('GORNITSA_MEDIA_WINDOW');
                 }
             });
 
@@ -1361,6 +1368,9 @@
         },
 
         renderModalContent: function () {
+            sessionStorage.setItem('GORNITSA_MEDIA_WINDOW', JSON.stringify({
+                category: this.activeCategory, index: this.activeIndex
+            }));
             this.renderModalPlayerOnly();
             this.renderModalPlaylistOnly();
         }

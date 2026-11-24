@@ -485,6 +485,20 @@
                 box.style.borderColor = '#8b1e0b';
             }
 
+            try {
+                sessionStorage.setItem('GORNITSA_TRUD_VERDICT', JSON.stringify(result));
+            } catch (error) {
+                console.error('Не удалось сохранить результат предложения для перезагрузки:', error);
+            }
+            renderIdeaVerdict(result);
+
+            renderTrudUI();
+        }
+
+        function renderIdeaVerdict(result) {
+            const box = document.getElementById('aiVerdictBox');
+            box.style.display = 'block';
+            box.style.borderColor = result.score > 0 ? '#2e7d32' : '#8b1e0b';
             box.innerHTML = `
                 <div style="font-weight:bold; font-size:17px; margin-bottom:4px;">
                     🤖 Вердикт ИИ: ${result.grade} (Начислено: ${result.score} монет)
@@ -492,7 +506,6 @@
                 <div>${result.comment}</div>
             `;
 
-            renderTrudUI();
         }
 
         function closeTrud() {
@@ -503,6 +516,17 @@
             }
         }
 
+        const trudNavigation = performance.getEntriesByType('navigation')[0];
+        if (trudNavigation && trudNavigation.type === 'reload') {
+            try {
+                const verdict = sessionStorage.getItem('GORNITSA_TRUD_VERDICT');
+                if (verdict) renderIdeaVerdict(JSON.parse(verdict));
+            } catch (error) {
+                console.error('Не удалось восстановить результат предложения:', error);
+            }
+        } else {
+            sessionStorage.removeItem('GORNITSA_TRUD_VERDICT');
+        }
         renderTrudUI();
     </script>
     <script src="auth.js"></script>

@@ -337,6 +337,7 @@
             var box = document.getElementById('infoScrollBox');
             if (ov) {
                 ov.classList.add('active');
+                sessionStorage.setItem('GORNITSA_OZERO_SCROLL_OPEN', '1');
                 if (box) box.scrollTop = 0;
             }
         }
@@ -348,6 +349,7 @@
             }
             var ov = document.getElementById('infoScrollOverlay');
             if (ov) ov.classList.remove('active');
+            sessionStorage.removeItem('GORNITSA_OZERO_SCROLL_OPEN');
             var returnContext = new URLSearchParams(window.location.search).get('return');
             if (returnContext === 'lake' || returnContext === 'yaga-lake') {
                 sessionStorage.setItem('GORNITSA_LAST_LOC', 'ozero');
@@ -370,7 +372,10 @@
         }
 
         // Если страницу открыли с параметром ?open=1, сразу разворачиваем свиток
-        if (window.location.search.indexOf('open=1') !== -1) {
+        var ozeroNavigation = performance.getEntriesByType('navigation')[0];
+        if (ozeroNavigation && ozeroNavigation.type === 'reload'
+            ? sessionStorage.getItem('GORNITSA_OZERO_SCROLL_OPEN') === '1'
+            : window.location.search.indexOf('open=1') !== -1) {
             openInfoScroll();
         }
     </script>

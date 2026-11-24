@@ -331,9 +331,10 @@
             document.getElementById('tabBtnSunduk').classList.toggle('active', tab === 'sunduk');
             document.getElementById('panelBuro').classList.toggle('active', tab === 'buro');
             document.getElementById('panelSunduk').classList.toggle('active', tab === 'sunduk');
+            sessionStorage.setItem('GORNITSA_BURO_TAB', tab);
         }
 
-        function orderDiagnostics() {
+        function orderDiagnostics(restoring = false) {
             const mName = document.getElementById('maleName').value.trim() || 'Мужчина';
             const fName = document.getElementById('femaleName').value.trim() || 'Женщина';
             const mDate = document.getElementById('maleDate').value;
@@ -347,7 +348,17 @@
             }
 
             // Оплата наличными (базовая цена 100 монет, со скидкой 50% ударника спишется 50 монет)
-            const payRes = GornitsaWallet.payCash(100, 'diagnostics', `Заказ Диагностики пары: ${mName} и ${fName}`);
+            const restored = restoring ? JSON.parse(sessionStorage.getItem('GORNITSA_BURO_RESULT')) : null;
+            const payRes = restoring ? restored.payRes : GornitsaWallet.payCash(100, 'diagnostics', `Заказ Диагностики пары: ${mName} и ${fName}`);
+            if (!restoring) {
+                try {
+                    sessionStorage.setItem('GORNITSA_BURO_RESULT', JSON.stringify({
+                        mName, fName, mDate, fDate, mBlood, fBlood, payRes
+                    }));
+                } catch (error) {
+                    console.error('Не удалось сохранить результат Справочного бюро для перезагрузки:', error);
+                }
+            }
             const box = document.getElementById('scanResultBox');
             box.style.display = 'block';
 
@@ -412,7 +423,7 @@
             box.innerHTML = reportHTML;
 
             // Сохраняем в Архивный Сундук
-            GornitsaWallet.saveDiagnosticToArchive({
+            if (!restoring) GornitsaWallet.saveDiagnosticToArchive({
                 maleBirth: `${mName} (${mDate}, кровь: ${mBlood}, ${mAnim}, ${mSign})`,
                 femaleBirth: `${fName} (${fDate}, кровь: ${fBlood}, ${fAnim}, ${fSign})`,
                 bloodColor: `${mBlood} / ${fBlood}`,
@@ -460,8 +471,31 @@
         }
 
         // Если открыли с параметром ?tab=sunduk — сразу открываем вкладку Сундука
-        if (window.location.search.indexOf('tab=sunduk') !== -1) {
+        const buroNavigation = performance.getEntriesByType('navigation')[0];
+        const savedBuroTab = sessionStorage.getItem('GORNITSA_BURO_TAB');
+        if (buroNavigation && buroNavigation.type === 'reload' && ['buro', 'sunduk'].includes(savedBuroTab)) {
+            switchTab(savedBuroTab);
+        } else if (window.location.search.indexOf('tab=sunduk') !== -1) {
             switchTab('sunduk');
+        }
+        if (buroNavigation && buroNavigation.type === 'reload') {
+            try {
+                const raw = sessionStorage.getItem('GORNITSA_BURO_RESULT');
+                if (raw) {
+                    const saved = JSON.parse(raw);
+                    document.getElementById('maleName').value = saved.mName;
+                    document.getElementById('femaleName').value = saved.fName;
+                    document.getElementById('maleDate').value = saved.mDate;
+                    document.getElementById('femaleDate').value = saved.fDate;
+                    document.getElementById('maleBlood').value = saved.mBlood;
+                    document.getElementById('femaleBlood').value = saved.fBlood;
+                    orderDiagnostics(true);
+                }
+            } catch (error) {
+                console.error('Не удалось восстановить результат Справочного бюро:', error);
+            }
+        } else {
+            sessionStorage.removeItem('GORNITSA_BURO_RESULT');
         }
 
         renderBuroHeader();

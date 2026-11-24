@@ -649,6 +649,7 @@
                 document.getElementById(`admTab${name}`).classList.toggle('active', tab === key);
                 document.getElementById(`panel${name}`).classList.toggle('active', tab === key);
             });
+            sessionStorage.setItem('GORNITSA_ADMIN_TAB', tab);
         }
 
         function toggleAdminMediaAccordion(cat) {
@@ -904,6 +905,10 @@
             window.location.href = 'index.html';
         }
 
+        const savedAdminTab = sessionStorage.getItem('GORNITSA_ADMIN_TAB');
+        if (['media', 'ideas', 'pairs', 'treasury', 'texts', 'labels', 'images'].includes(savedAdminTab)) {
+            switchAdminTab(savedAdminTab);
+        }
         safeRenderAdminSection('данные пользователя', renderAdminUI, 'statUserBank', 'Данные недоступны');
         safeRenderAdminSection(
             'медиатека',

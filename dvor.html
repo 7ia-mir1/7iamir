@@ -229,25 +229,33 @@
     // Открытие чата при нажатии на подсветку группы людей
     openChatHotspot.addEventListener('click', () => {
       chatModal.classList.add('open');
+      sessionStorage.setItem('GORNITSA_DVOR_CHAT_OPEN', '1');
     });
 
     // Закрытие по крестику
     closeChatBtn.addEventListener('click', () => {
       chatModal.classList.remove('open');
+      sessionStorage.removeItem('GORNITSA_DVOR_CHAT_OPEN');
     });
 
     // Закрытие при клике по темному фону вокруг окна чата или клавише Esc
     chatModal.addEventListener('click', (e) => {
       if (e.target === chatModal) {
         chatModal.classList.remove('open');
+        sessionStorage.removeItem('GORNITSA_DVOR_CHAT_OPEN');
       }
     });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && chatModal.classList.contains('open')) {
         chatModal.classList.remove('open');
+        sessionStorage.removeItem('GORNITSA_DVOR_CHAT_OPEN');
       }
     });
+    const navigation = performance.getEntriesByType('navigation')[0];
+    if (navigation && navigation.type === 'reload' && sessionStorage.getItem('GORNITSA_DVOR_CHAT_OPEN') === '1') {
+      chatModal.classList.add('open');
+    }
   </script>
 
     <script src="auth.js"></script>

@@ -929,10 +929,39 @@
         var elapsedSeconds = 0;
         var isUnlimitedMode = false;
         var timerInterval = null;
+        var yagaScreen = 'chat';
+        var yagaRoadImage = '';
+        var yagaRoadCaption = '';
+
+        function saveYagaScreen() {
+            try {
+                sessionStorage.setItem('GORNITSA_YAGA_SCREEN', JSON.stringify({
+                    screen: yagaScreen, remaining: remainingSeconds, elapsed: elapsedSeconds,
+                    unlimited: isUnlimitedMode, savedAt: Date.now(), roadTarget: currentRoadTarget,
+                    roadImage: yagaRoadImage, roadCaption: yagaRoadCaption,
+                    choiceOpen: document.getElementById('yagaChoiceModal').classList.contains('active'),
+                    ozeroModal: getSceneModalState('ozero'),
+                    ploshadModal: getSceneModalState('ploshad')
+                }));
+            } catch (error) {
+                console.error('Не удалось сохранить экран Бабы-Яги:', error);
+            }
+        }
+
+        function getSceneModalState(scene) {
+            var modal = document.getElementById(scene + 'InfoModal');
+            if (!modal.classList.contains('active')) return null;
+            return {
+                choice: modal.dataset.choice === 'true',
+                title: document.getElementById(scene + 'ModalTitle').innerText,
+                text: document.getElementById(scene + 'ModalText').innerText
+            };
+        }
 
         function startTimer() {
             if (timerInterval) clearInterval(timerInterval);
             updateClockUI();
+            saveYagaScreen();
             timerInterval = setInterval(function() {
                 elapsedSeconds++;
                 if (!isUnlimitedMode) {
@@ -940,6 +969,7 @@
                     if (remainingSeconds <= 0) {
                         remainingSeconds = 0;
                         updateClockUI();
+                        saveYagaScreen();
                         finishConversation();
                         return;
                     }
@@ -1030,7 +1060,7 @@
         }
 
         // 4. Загрузка сохранённой истории и гарантированное приветствие Бабы-Яги при старте
-        function loadAndGreet() {
+        function loadAndGreet(restoring) {
             try {
                 var raw = localStorage.getItem(STORAGE_HISTORY_KEY);
                 if (raw) {
@@ -1054,6 +1084,10 @@
             var firstGreeting = 'Здравствуй, ' + appeal + '. Твоя телега превратилась в тыкву. Пока идёт время, мы можем побеседовать на любую интересную тебе тему — я отвечу прямо, толково и по делу на любой вопрос.';
             var returnGreeting = 'С возвращением! О чём поговорим сегодня? Задавай любой вопрос.';
 
+            if (restoring && chatHistory.length > 0) {
+                renderMessages();
+                return;
+            }
             if (!hasVisitedBefore || chatHistory.length === 0) {
                 chatHistory = [{ role: 'model', text: firstGreeting }];
                 try { localStorage.setItem(STORAGE_VISITED_KEY, 'true'); } catch (e) {}
@@ -1445,6 +1479,8 @@
             feather.classList.remove('active');
             revealYagaReturnCart();
             document.getElementById('telegaSceneOverlay').style.display = 'flex';
+            yagaScreen = 'cart';
+            saveYagaScreen();
         }
 
         var isYagaSceneEntry = new URLSearchParams(window.location.search).get('mode') === 'scene';
@@ -1485,6 +1521,8 @@
             stage.classList.remove('show-labels');
             feather.classList.remove('active');
             document.getElementById('telegaSceneOverlay').style.display = 'flex';
+            yagaScreen = 'scene';
+            saveYagaScreen();
         }
 
         function handleYagaHotspotClick(event) {
@@ -1524,11 +1562,13 @@
             });
             backdrop.classList.add('active');
             modal.classList.add('active');
+            saveYagaScreen();
         }
 
         function closeYagaChoiceDialog() {
             document.getElementById('yagaChoiceModal').classList.remove('active');
             document.getElementById('yagaChoiceBackdrop').classList.remove('active');
+            saveYagaScreen();
         }
 
         function openPaidYagaChat() {
@@ -1547,9 +1587,11 @@
             closeYagaChoiceDialog();
             document.documentElement.classList.remove('scene-entry');
             hideAllSceneOverlays();
+            yagaScreen = 'chat';
             loadAndGreet();
             if (!isUnlimitedMode) remainingSeconds = TEN_MINUTES;
             startTimer();
+            saveYagaScreen();
         }
 
         function declineYagaChat() {
@@ -1569,6 +1611,7 @@
         // Повторный вход в чат при нажатии на Бабу-Ягу
         function reopenChatFromTelega() {
             hideAllSceneOverlays();
+            yagaScreen = 'chat';
             var returnGreeting = 'Что нового там, в вашем мире? Поговори со мной.';
             var lastMsg = chatHistory[chatHistory.length - 1];
             if (!lastMsg || lastMsg.text !== returnGreeting) {
@@ -1578,6 +1621,7 @@
                 remainingSeconds = TEN_MINUTES;
             }
             startTimer();
+            saveYagaScreen();
         }
 
         // 7. Универсальный переход с 4-секундной дорогой:
@@ -1620,6 +1664,10 @@
             roadImg.classList.add('riding-animation');
 
             roadOverlay.style.display = 'flex';
+            yagaScreen = 'road';
+            yagaRoadImage = roadImageSrc;
+            yagaRoadCaption = captionText;
+            saveYagaScreen();
 
             roadTimer = setTimeout(function() {
                 finishCurrentRoadTravel();
@@ -1679,6 +1727,8 @@
             ozeroStage.classList.remove('show-labels');
             ozeroFeather.classList.remove('active');
             ozeroOverlay.style.display = 'flex';
+            yagaScreen = 'ozero';
+            saveYagaScreen();
         }
 
         function showPloshadScene() {
@@ -1689,6 +1739,8 @@
             ploshadStage.classList.remove('show-labels');
             ploshadFeather.classList.remove('active');
             ploshadOverlay.style.display = 'flex';
+            yagaScreen = 'ploshad';
+            saveYagaScreen();
         }
 
         // Модальные окна на сцене Озеро
@@ -1698,6 +1750,8 @@
             var choicesBox = document.getElementById('ozeroModalChoices');
             if (choicesBox) choicesBox.innerHTML = '';
             document.getElementById('ozeroInfoModal').classList.add('active');
+            document.getElementById('ozeroInfoModal').dataset.choice = 'false';
+            saveYagaScreen();
         }
 
         function openOzeroInfoPage() {
@@ -1732,6 +1786,8 @@
             choicesBox.appendChild(btnYaga);
 
             document.getElementById('ozeroInfoModal').classList.add('active');
+            document.getElementById('ozeroInfoModal').dataset.choice = 'true';
+            saveYagaScreen();
         }
 
         function closeOzeroModal(event) {
@@ -1741,6 +1797,7 @@
             }
             document.getElementById('ozeroInfoModal').classList.remove('active');
             document.getElementById('ozeroModalChoices').innerHTML = '';
+            saveYagaScreen();
         }
 
         // Модальные окна на сцене Райцентр (Площадь)
@@ -1749,6 +1806,8 @@
             document.getElementById('ploshadModalText').innerText = text;
             document.getElementById('ploshadModalChoices').innerHTML = '';
             document.getElementById('ploshadInfoModal').classList.add('active');
+            document.getElementById('ploshadInfoModal').dataset.choice = 'false';
+            saveYagaScreen();
         }
 
         function openPloshadChoiceModal() {
@@ -1778,18 +1837,64 @@
             choicesBox.appendChild(btnLeshy);
 
             document.getElementById('ploshadInfoModal').classList.add('active');
+            document.getElementById('ploshadInfoModal').dataset.choice = 'true';
+            saveYagaScreen();
         }
 
         function closePloshadModal() {
             document.getElementById('ploshadInfoModal').classList.remove('active');
+            saveYagaScreen();
         }
 
         // Сценический вход с Озера ждёт выбора и оплаты перед запуском беседы.
-        if (isYagaSceneEntry) {
+        var yagaNavigation = performance.getEntriesByType('navigation')[0];
+        var savedYagaScreen = null;
+        if (yagaNavigation && yagaNavigation.type === 'reload') {
+            try {
+                savedYagaScreen = JSON.parse(sessionStorage.getItem('GORNITSA_YAGA_SCREEN') || 'null');
+            } catch (error) {
+                console.error('Не удалось восстановить экран Бабы-Яги:', error);
+            }
+        }
+        if (savedYagaScreen && savedYagaScreen.screen !== 'scene') {
+            document.documentElement.classList.remove('scene-entry');
+            if (savedYagaScreen.screen !== 'chat') loadAndGreet(true);
+        }
+        if (savedYagaScreen && savedYagaScreen.screen === 'chat') {
+            remainingSeconds = Math.max(0, Number(savedYagaScreen.remaining) - Math.floor((Date.now() - savedYagaScreen.savedAt) / 1000));
+            elapsedSeconds = Number(savedYagaScreen.elapsed) || 0;
+            loadAndGreet(true);
+            if (savedYagaScreen.unlimited) enableUnlimitedMode();
+            if (!savedYagaScreen.unlimited && remainingSeconds <= 0) finishConversation();
+            else {
+                startTimer();
+                saveYagaScreen();
+            }
+        } else if (savedYagaScreen && savedYagaScreen.screen === 'cart') {
+            finishConversation();
+        } else if (savedYagaScreen && savedYagaScreen.screen === 'ozero') {
+            showOzeroScene();
+            if (savedYagaScreen.ozeroModal) {
+                if (savedYagaScreen.ozeroModal.choice) openOzeroCartChoiceModal();
+                else openOzeroModal(savedYagaScreen.ozeroModal.title, savedYagaScreen.ozeroModal.text);
+            }
+        } else if (savedYagaScreen && savedYagaScreen.screen === 'ploshad') {
+            showPloshadScene();
+            if (savedYagaScreen.ploshadModal) {
+                if (savedYagaScreen.ploshadModal.choice) openPloshadChoiceModal();
+                else openPloshadModal(savedYagaScreen.ploshadModal.title, savedYagaScreen.ploshadModal.text);
+            }
+        } else if (savedYagaScreen && savedYagaScreen.screen === 'road' &&
+                   ['ozero', 'ploshad', 'yaga', 'dvor'].includes(savedYagaScreen.roadTarget)) {
+            currentRoadTarget = savedYagaScreen.roadTarget;
+            runRoadTransition(savedYagaScreen.roadImage, savedYagaScreen.roadCaption);
+        } else if (isYagaSceneEntry) {
             showYagaScene();
+            if (savedYagaScreen && savedYagaScreen.choiceOpen) openYagaChoiceDialog();
         } else {
             loadAndGreet();
             startTimer();
+            saveYagaScreen();
         }
     </script>
     <script src="auth.js"></script>

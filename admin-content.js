@@ -32,6 +32,7 @@
     const editor = document.getElementById(isText ? "contentTextValue" : "contentLabelValue");
     const values = isText ? textValues : labelValues;
     selectedKeys[category] = select.value;
+    sessionStorage.setItem(`GORNITSA_ADMIN_CONTENT_${category}`, select.value);
     editor.value = Object.prototype.hasOwnProperty.call(values, select.value)
       ? values[select.value]
       : "";
@@ -42,6 +43,7 @@
     const isText = category === "texts";
     const keyInput = document.getElementById(isText ? "newTextKey" : "newLabelKey");
     selectedKeys[category] = "";
+    sessionStorage.removeItem(`GORNITSA_ADMIN_CONTENT_${category}`);
     document.getElementById(isText ? "contentTextKeyList" : "contentLabelKeyList").selectedIndex = -1;
     document.getElementById(isText ? "contentTextValue" : "contentLabelValue").value = "";
     keyInput.focus();
@@ -66,6 +68,7 @@
     const values = isText ? textValues : labelValues;
     values[key] = value;
     selectedKeys[category] = key;
+    sessionStorage.setItem(`GORNITSA_ADMIN_CONTENT_${category}`, key);
     fillKeyList(document.getElementById(isText ? "contentTextKeyList" : "contentLabelKeyList"), values, category);
     keyInput.value = "";
     if (result.persisted === "cloud") {
@@ -107,13 +110,21 @@
       select.appendChild(option);
     }
     if (select.options.length) {
-      select.selectedIndex = 0;
+      const savedPage = sessionStorage.getItem("GORNITSA_ADMIN_BOOK_PAGE");
+      if (savedPage && Array.from(select.options).some(option => option.value === savedPage)) {
+        select.value = savedPage;
+      } else {
+        select.selectedIndex = 0;
+      }
       loadBookPage();
     }
   }
 
   function loadBookPage() {
     const pageNumber = Number(document.getElementById("bookPageList").value);
+    if (Number.isInteger(pageNumber) && pageNumber > 0) {
+      sessionStorage.setItem("GORNITSA_ADMIN_BOOK_PAGE", String(pageNumber));
+    }
     const page = book && book.pages.find(item => item.p === pageNumber);
     document.getElementById("bookPageTitle").value = page ? page.t : "";
     document.getElementById("bookPageHtml").value = page ? page.h : "";
@@ -296,6 +307,8 @@
     await window.GornitsaContent.ready;
     textValues = { ...window.GornitsaContent.texts };
     labelValues = { ...window.GornitsaContent.labels };
+    selectedKeys.texts = sessionStorage.getItem("GORNITSA_ADMIN_CONTENT_texts") || "";
+    selectedKeys.labels = sessionStorage.getItem("GORNITSA_ADMIN_CONTENT_labels") || "";
     fillKeyList(document.getElementById("contentTextKeyList"), textValues, "texts");
     fillKeyList(document.getElementById("contentLabelKeyList"), labelValues, "labels");
     document.getElementById("contentTextKeyList").addEventListener("change", () => selectContentEntry("texts"));

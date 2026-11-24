@@ -293,16 +293,16 @@
 
   .btn-info-circle {
     flex: 0 0 auto;
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
-    min-width: 32px;
+    width: 21px;
+    height: 21px;
+    min-height: 21px;
+    min-width: 21px;
     padding: 0;
     border-radius: 50%;
     background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
     border: 2px solid #261508;
     color: #261508;
-    font-size: 18px;
+    font-size: 12px;
     font-weight: 900;
     line-height: 1;
     display: flex;
@@ -526,10 +526,10 @@
 
   /* Кнопка заблокировать в чате */
   .btn-block-user {
-    background: linear-gradient(180deg, #2a5aab 0%, #1a3a7b 100%);
-    border: 1px solid #4a7acb;
-    color: #ffffff;
-    font-size: 11px;
+    background: #ffffff;
+    border: 1px solid #000000;
+    color: #000000;
+    font-size: 15px;
     padding: 2px 6px;
     border-radius: 5px;
     cursor: pointer;
@@ -537,7 +537,8 @@
   }
 
   .btn-block-user:hover {
-    filter: brightness(1.15);
+    background: #f5f5f5;
+    color: #000000;
   }
 
   /* Кнопка ответить в общем чате */
@@ -632,7 +633,9 @@
   }
 
   .msg-text {
-    font-size: 28px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'PT Serif', serif;
     line-height: 1.3;
     white-space: pre-wrap;
     word-break: break-word;
@@ -683,10 +686,10 @@
   }
 
   .btn-delete-msg {
-    background: none;
-    border: 1px solid rgba(150, 40, 40, 0.4);
-    color: #8b261d;
-    font-size: 10px;
+    background: #ffffff;
+    border: 1px solid #000000;
+    color: #000000;
+    font-size: 15px;
     padding: 1px 5px;
     border-radius: 5px;
     cursor: pointer;
@@ -694,8 +697,8 @@
   }
 
   .btn-delete-msg:hover {
-    background: #8b261d;
-    color: #fff;
+    background: #f5f5f5;
+    color: #000000;
   }
 
   .timer-countdown {
@@ -2773,7 +2776,10 @@
 
   .msg-text {
     font-size: 13px;
+    font-weight: 700;
+    font-family: 'PT Serif', serif;
     line-height: 1.35;
+    color: #000000;
   }
 
   .msg-actions {
@@ -2784,7 +2790,7 @@
 
   .btn-delete-msg {
     padding: 1px 5px;
-    font-size: 10px;
+    font-size: 15px;
   }
 
   .sidebar-online,
@@ -2861,7 +2867,8 @@
   .msg-text {
     color: #000000 !important;
     font-weight: 700 !important;
-    font-size: 24px !important;
+    font-size: 14px !important;
+    font-family: 'PT Serif', serif !important;
     line-height: 1.3 !important;
   }
 
@@ -2920,11 +2927,11 @@
           <button type="button" class="sidebar-service-btn" id="generalChatBtn" data-room="ALL" title="Общий чат для всех">Общий чат</button>
           <div class="sidebar-btn-row">
             <button type="button" class="btn-info-circle" onclick="openSupremeInfoModal(); event.stopPropagation();" title="Информация о Верховном" aria-label="Информация">?</button>
-            <button type="button" class="sidebar-service-btn" id="supremeChatBtn" title="Чат с Верховным">Чат с Верховным</button>
+            <button type="button" class="sidebar-service-btn" id="supremeChatBtn" title="Чат с Верховным">Верховный</button>
           </div>
           <div class="sidebar-btn-row">
             <button type="button" class="btn-info-circle" onclick="openPoliceInfoModal(); event.stopPropagation();" title="Правила ПОЛИЦИИ" aria-label="Информация">?</button>
-            <button type="button" class="sidebar-service-btn police-btn" id="policeBtn" title="Служба порядка">ПОЛИЦИЯ</button>
+            <button type="button" class="sidebar-service-btn police-btn" id="policeBtn" title="Служба порядка">Полиция</button>
           </div>
           <button type="button" class="sidebar-service-btn" id="blocksBtn" title="Управление заблокированными пользователями">Блокировки</button>
         </div>
@@ -3182,6 +3189,14 @@
   // Инициализация ID пользователя
   async function initializeUserId() {
     console.log('[Chat] Starting user ID initialization...');
+    if (window.GornitsaAuth && window.GornitsaAuth.ready) {
+      const user = await window.GornitsaAuth.ready;
+      if (user && typeof user.id === 'string' && /^\d{1,10}$/.test(user.id)) {
+        myId = user.id;
+        STORAGE_KEY = `7ia_mir_chat_messages_v3_${myId}`;
+        return { success: true, id: myId };
+      }
+    }
     
     // 1. Пытаемся получить ID из родительского окна (если загружено через iframe)
     console.log('[Chat] Step 1: Checking parent window...');
@@ -3258,9 +3273,54 @@
   ];
   let selectedTargetId = 'ALL';
   let isSupremeChatSelected = false;
+  let selectedRoomType = 'public';
+  let supremeUserId = null;
+  let chatStateRestored = false;
   let handlersInitialized = false;
 
   let messages = [];
+
+  function saveChatState() {
+    if (!myId || !chatStateRestored) return;
+    try {
+      sessionStorage.setItem(`7ia_chat_state_${myId}`, JSON.stringify({
+        type: selectedRoomType,
+        targetId: selectedTargetId,
+        blocksOpen: document.getElementById('blocksModalOverlay').classList.contains('open')
+      }));
+    } catch (error) {
+      console.error('[Chat] Не удалось сохранить открытый чат:', error);
+    }
+  }
+
+  function restoreChatState() {
+    if (chatStateRestored) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', restoreChatState, { once: true });
+      return;
+    }
+    chatStateRestored = true;
+    let state;
+    try {
+      state = JSON.parse(sessionStorage.getItem(`7ia_chat_state_${myId}`) || 'null');
+    } catch (error) {
+      console.error('[Chat] Не удалось восстановить открытый чат:', error);
+      return;
+    }
+    if (!state || !['public', 'private', 'supreme', 'police'].includes(state.type)) return;
+    if (state.type !== 'public' && !/^\d{1,10}$/.test(state.targetId)) return;
+    if (state.type !== 'public' && state.targetId === myId) return;
+    selectedRoomType = state.type;
+    selectedTargetId = state.type === 'public' ? 'ALL' : state.targetId;
+    isSupremeChatSelected = state.type === 'supreme';
+    if (selectedTargetId !== 'ALL' && !onlineUsers.some(user => user.id === selectedTargetId)) {
+      onlineUsers.push({ id: selectedTargetId, label: `ID ${selectedTargetId}`, online: false, strictNoSave: false });
+    }
+    renderOnlineList();
+    updateRoomHeader();
+    renderMessages({ forceScrollBottom: true });
+    if (state.blocksOpen) openBlocksModal();
+  }
 
   // Загрузка сохраненных сообщений из localStorage (если ключ доступен)
   function loadSavedMessages() {
@@ -3336,7 +3396,7 @@
         return;
       }
 
-      const isSelected = u.id === selectedTargetId;
+      const isSelected = selectedRoomType === 'private' && u.id === selectedTargetId;
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'user-item' + (isSelected ? ' active' : '');
@@ -3350,13 +3410,26 @@
       `;
       item.addEventListener('click', () => {
         selectedTargetId = u.id;
+        selectedRoomType = 'private';
         isSupremeChatSelected = false;
+        closeBlocksModal();
         messagesAreaEl.innerHTML = '';
         renderOnlineList();
         updateRoomHeader();
         renderMessages({ forceScrollBottom: true });
+        saveChatState();
       });
       onlineListEl.appendChild(item);
+      if (supremeUserId === myId) {
+        const serviceItem = document.createElement('button');
+        const isServiceSelected = selectedRoomType === 'supreme' && u.id === selectedTargetId;
+        serviceItem.type = 'button';
+        serviceItem.className = 'user-item' + (isServiceSelected ? ' active' : '');
+        serviceItem.setAttribute('aria-pressed', String(isServiceSelected));
+        serviceItem.textContent = `Обращение Верховному: ID ${u.id}`;
+        serviceItem.addEventListener('click', () => openDirectChat(u.id, true));
+        onlineListEl.appendChild(serviceItem);
+      }
     });
   }
 
@@ -3367,18 +3440,32 @@
       onlineUsers.push({
         id: targetId,
         label: `ID ${targetId}`,
-        role: targetId === '1003' ? 'admin' : 'user',
+        role: targetId === supremeUserId ? 'admin' : 'user',
         avatar: '',
         online: false,
         strictNoSave: false
       });
     }
     selectedTargetId = targetId;
+    selectedRoomType = openedFromSupremeButton ? 'supreme' : 'private';
     isSupremeChatSelected = openedFromSupremeButton;
+    closeBlocksModal();
     messagesAreaEl.innerHTML = '';
     renderOnlineList();
     updateRoomHeader();
     renderMessages({ forceScrollBottom: true });
+    saveChatState();
+  }
+
+  function addSupremeContactsFromHistory() {
+    if (!myId || supremeUserId !== myId) return;
+    messages.forEach(message => {
+      if (message.channel !== 'supreme') return;
+      const targetId = String(message.senderId === myId ? message.targetId : message.senderId);
+      if (!/^\d{1,10}$/.test(targetId) || targetId === myId || isUserBlocked(targetId) ||
+          onlineUsers.some(user => user.id === targetId)) return;
+      onlineUsers.push({ id: targetId, label: `ID ${targetId}`, online: false, strictNoSave: false });
+    });
   }
 
   // Инициализация кнопок с проверкой ID будет выполнена в displayUserIdBadge().then()
@@ -3393,20 +3480,17 @@
     let title = '';
     let showBlockBtn = false;
     
-    if (selectedTargetId === 'ALL') {
+    if (selectedRoomType === 'public') {
       title = 'Общий зал';
       showBlockBtn = false;
-    } else if (selectedTargetId === '1003') {
-      title = 'Чат с Верховным';
-      isSupremeChatSelected = true;
+    } else if (selectedRoomType === 'supreme') {
+      title = supremeUserId === myId ? `Обращение Верховному: ID ${selectedTargetId}` : 'Чат с Верховным';
       showBlockBtn = false;
-    } else if (selectedTargetId === '1002') {
+    } else if (selectedRoomType === 'police') {
       title = 'ПОЛИЦИЯ';
-      isSupremeChatSelected = false;
       showBlockBtn = false;
     } else {
       title = `Личный чат с ID ${selectedTargetId}`;
-      isSupremeChatSelected = false;
       showBlockBtn = true;
     }
     
@@ -3425,10 +3509,12 @@
         if (confirm(`Заблокировать ID ${selectedTargetId}? Вы оба не сможете видеть друг друга.`)) {
           await blockUser(selectedTargetId);
           selectedTargetId = 'ALL';
+          selectedRoomType = 'public';
           messagesAreaEl.innerHTML = '';
           renderOnlineList();
           updateRoomHeader();
           renderMessages({ forceScrollBottom: true });
+          saveChatState();
         }
       });
       currentRoomTitleEl.parentNode.appendChild(blockHeaderBtn);
@@ -3437,12 +3523,17 @@
     }
     
     if (supremeChatBtn) {
-      supremeChatBtn.classList.toggle('active', selectedTargetId === '1003');
-      supremeChatBtn.setAttribute('aria-pressed', String(selectedTargetId === '1003'));
+      const active = selectedRoomType === 'supreme' && supremeUserId !== myId;
+      supremeChatBtn.classList.toggle('active', active);
+      supremeChatBtn.setAttribute('aria-pressed', String(active));
     }
     if (policeBtn) {
-      policeBtn.classList.toggle('active', selectedTargetId === '1002');
-      policeBtn.setAttribute('aria-pressed', String(selectedTargetId === '1002'));
+      policeBtn.classList.toggle('active', selectedRoomType === 'police');
+      policeBtn.setAttribute('aria-pressed', String(selectedRoomType === 'police'));
+    }
+    if (generalChatBtn) {
+      generalChatBtn.classList.toggle('active', selectedRoomType === 'public');
+      generalChatBtn.setAttribute('aria-pressed', String(selectedRoomType === 'public'));
     }
     updatePrivacyBadge();
   }
@@ -3469,6 +3560,8 @@
       const result = await response.json();
       console.log(`[Chat] ✓ Presence API returned ${result.users?.length || 0} users:`, result.users);
       if (!Array.isArray(result.users)) throw new Error('Некорректный ответ API присутствия');
+      supremeUserId = /^\d{1,10}$/.test(result.supreme_user_id) ? result.supreme_user_id : null;
+      initializeSupremeButton();
 
       const contacts = result.users
         .filter(user => {
@@ -3503,6 +3596,11 @@
       
       console.log(`[Chat] ✓ Final contacts after filtering (${contacts.length}):`, contacts.map(c => c.id));
       onlineUsers.splice(0, onlineUsers.length, onlineUsers[0], ...contacts);
+      addSupremeContactsFromHistory();
+      if (selectedTargetId !== 'ALL' && !onlineUsers.some(user => user.id === selectedTargetId)) {
+        onlineUsers.push({ id: selectedTargetId, label: `ID ${selectedTargetId}`, online: false, strictNoSave: false });
+      }
+      restoreChatState();
       renderOnlineList();
       updateRoomHeader();
       lastPresenceErrorAt = 0;
@@ -3564,6 +3662,7 @@
           // Инициализируем кнопки при успешной загрузке ID
           initializeButtonHandlers();
           initializeSupremeButton();
+          restoreChatState();
           // Загружаем список блокировок
           initializeBlockedUsersAndRender();
         }
@@ -3577,6 +3676,7 @@
     // Инициализируем кнопки и кнопку "Чат с Верховным" с правильным ID
     initializeButtonHandlers();
     initializeSupremeButton();
+    restoreChatState();
     
     // Загружаем список блокировок и рендерим список онлайна
     initializeBlockedUsersAndRender();
@@ -3598,7 +3698,7 @@
   function initializeSupremeButton() {
     try {
       if (supremeChatBtn) {
-        supremeChatBtn.disabled = myId === '1003';
+        supremeChatBtn.disabled = !supremeUserId || myId === supremeUserId;
         supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
         console.log(`[Chat] ✓ initializeSupremeButton: supremeChatBtn is ready (myId=${myId})`);
       } else {
@@ -3619,11 +3719,14 @@
     if (generalChatBtn) {
       generalChatBtn.addEventListener('click', () => {
         selectedTargetId = 'ALL';
+        selectedRoomType = 'public';
         isSupremeChatSelected = false;
+        closeBlocksModal();
         renderOnlineList();
         updateRoomHeader();
         messagesAreaEl.innerHTML = '';
         renderMessages({ forceScrollBottom: true });
+        saveChatState();
       });
     }
 
@@ -3633,23 +3736,21 @@
 
     if (supremeChatBtn) {
       supremeChatBtn.addEventListener('click', () => {
-        selectedTargetId = '1003';
-        isSupremeChatSelected = true;
-        renderOnlineList();
-        updateRoomHeader();
-        messagesAreaEl.innerHTML = '';
-        renderMessages({ forceScrollBottom: true });
+        if (supremeUserId) openDirectChat(supremeUserId, true);
       });
     }
 
     if (policeBtn) {
       policeBtn.addEventListener('click', () => {
         selectedTargetId = '1002';
+        selectedRoomType = 'police';
         isSupremeChatSelected = false;
+        closeBlocksModal();
         renderOnlineList();
         updateRoomHeader();
         messagesAreaEl.innerHTML = '';
         renderMessages({ forceScrollBottom: true });
+        saveChatState();
       });
     }
 
@@ -3827,6 +3928,7 @@
       expiresAt: row.expires_at ? Number(row.expires_at) * 1000 : null,
       deleteScope: row.delete_scope || 'off',
       noSave: Boolean(row.no_save),
+      channel: row.channel || 'private',
     };
   }
 
@@ -3852,6 +3954,10 @@
         serverIds.add(row.id);
         const existing = messages.find(message => message.id === row.id);
         if (existing) {
+          if (existing.channel !== (row.channel || 'private')) {
+            existing.channel = row.channel || 'private';
+            changed = true;
+          }
           const createdAt = Number(row.created_at) * 1000;
           if (Number.isFinite(createdAt) && existing.createdAt !== createdAt) {
             existing.createdAt = createdAt;
@@ -3880,6 +3986,8 @@
       }
 
       if (changed) {
+        addSupremeContactsFromHistory();
+        renderOnlineList();
         saveMessagesIfNeeded();
         renderMessages({ forceScrollBottom: false });
       }
@@ -3905,6 +4013,7 @@
         id: message.id,
         sender_id: message.senderId,
         target_id: message.targetId,
+        channel: message.channel,
         text: message.text,
         image_data_url: message.imageDataUrl,
         image_size_kb: message.imageSizeKb,
@@ -3953,6 +4062,7 @@
       const senderId = String(m.senderId);
       const targetId = String(m.targetId);
       if (selectedTargetId === 'ALL') return targetId === 'ALL';
+      if (selectedRoomType === 'supreme' ? m.channel !== 'supreme' : m.channel === 'supreme') return false;
       return (senderId === selectedTargetId && targetId === myId) ||
              (senderId === myId && targetId === selectedTargetId);
     });
@@ -4185,6 +4295,7 @@
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       senderId: payload.senderId || myId,
       targetId: targetId,
+      channel: selectedRoomType === 'public' ? 'public' : selectedRoomType === 'supreme' ? 'supreme' : 'private',
       text: payload.text || '',
       imageDataUrl: payload.imageDataUrl || null,
       imageSizeKb: payload.imageSizeKb || null,
@@ -4283,6 +4394,7 @@
       chatWindowBox.style.width = '';
       chatWindowBox.style.height = '';
       chatWindowBox.classList.toggle('windowed', windowed);
+      sessionStorage.setItem('7ia_chat_windowed', String(windowed));
 
       const icon = chatWindowToggleBtn.querySelector('.chat-window-icon');
       const tooltip = chatWindowToggleBtn.querySelector('.chat-window-tooltip');
@@ -4408,7 +4520,9 @@
       chatWindowBox.style.top = `${clampWindowPosition(rect.top, 0, window.innerHeight - rect.height)}px`;
     });
 
-    setChatWindowed(false);
+    const navigation = performance.getEntriesByType('navigation')[0];
+    setChatWindowed(Boolean(navigation && navigation.type === 'reload' &&
+      sessionStorage.getItem('7ia_chat_windowed') === 'true'));
   }
 
   document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
@@ -4557,6 +4671,9 @@
     if (overlay && modal) {
       overlay.classList.add('open');
       renderBlocksModal();
+      blocksBtn.classList.add('active');
+      blocksBtn.setAttribute('aria-pressed', 'true');
+      saveChatState();
     }
   }
 
@@ -4564,6 +4681,11 @@
     const overlay = document.getElementById('blocksModalOverlay');
     if (overlay) {
       overlay.classList.remove('open');
+      if (blocksBtn) {
+        blocksBtn.classList.remove('active');
+        blocksBtn.setAttribute('aria-pressed', 'false');
+      }
+      saveChatState();
     }
   }
 
