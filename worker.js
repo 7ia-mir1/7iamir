@@ -570,7 +570,7 @@ async function handleChat(request, env, session) {
               image_data_url, image_size_kb, file_data_url, file_size_formatted,
               delete_scope, no_save, channel, created_at, expires_at
        FROM chat_messages
-       WHERE (target_id = 'ALL' OR sender_id = ? OR target_id = ?)
+       WHERE (target_id = 'ALL') OR (sender_id = ? AND target_id != 'ALL') OR (target_id = ? AND sender_id != 'ALL')
        ORDER BY created_at DESC
        LIMIT ?`,
     ).bind(userId, userId, limit + 1).all();

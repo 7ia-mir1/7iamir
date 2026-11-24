@@ -601,19 +601,19 @@
   }
 
   .msg-bubble {
-    background: rgba(255, 250, 238, 0.9);
-    border: 2px solid #c5a676;
+    background: #FFD700;
+    border: 2px solid #FFD700;
     border-radius: 12px;
-    padding: 6px 9px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    padding: 8px 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     position: relative;
     min-width: 0;
     max-width: 100%;
   }
 
   .message-row.mine .msg-bubble {
-    background: #fdf3dc;
-    border-color: #a8834d;
+    background: #FFD700;
+    border-color: #FFD700;
   }
 
   .msg-header {
@@ -621,21 +621,22 @@
     justify-content: space-between;
     align-items: center;
     gap: 14px;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
     font-size: 12px;
-    color: var(--text-muted);
+    color: #000000;
   }
 
   .msg-sender-id {
     font-weight: 700;
-    color: var(--wood-dark);
+    color: #000000;
   }
 
   .msg-text {
-    font-size: 13px;
-    line-height: 1.35;
+    font-size: 28px;
+    line-height: 1.3;
     white-space: pre-wrap;
     word-break: break-word;
+    color: #000000;
   }
 
   .msg-image {
@@ -3324,6 +3325,7 @@
       item.addEventListener('click', () => {
         selectedTargetId = u.id;
         isSupremeChatSelected = false;
+        messagesAreaEl.innerHTML = '';
         renderOnlineList();
         updateRoomHeader();
         renderMessages({ forceScrollBottom: true });
@@ -3347,6 +3349,7 @@
     }
     selectedTargetId = targetId;
     isSupremeChatSelected = openedFromSupremeButton;
+    messagesAreaEl.innerHTML = '';
     renderOnlineList();
     updateRoomHeader();
     renderMessages({ forceScrollBottom: true });
@@ -3361,18 +3364,52 @@
       return;
     }
     
+    let title = '';
+    let showBlockBtn = false;
+    
     if (selectedTargetId === 'ALL') {
-      currentRoomTitleEl.textContent = 'Общий зал';
+      title = 'Общий зал';
+      showBlockBtn = false;
     } else if (selectedTargetId === '1003') {
-      currentRoomTitleEl.textContent = 'Чат с Верховным';
+      title = 'Чат с Верховным';
       isSupremeChatSelected = true;
+      showBlockBtn = false;
     } else if (selectedTargetId === '1002') {
-      currentRoomTitleEl.textContent = 'ПОЛИЦИЯ';
+      title = 'ПОЛИЦИЯ';
       isSupremeChatSelected = false;
+      showBlockBtn = false;
     } else {
-      currentRoomTitleEl.textContent = `Личный чат с ID ${selectedTargetId}`;
+      title = `Личный чат с ID ${selectedTargetId}`;
       isSupremeChatSelected = false;
+      showBlockBtn = true;
     }
+    
+    currentRoomTitleEl.textContent = title;
+    
+    // Управляем кнопкой "Заблокировать" в заголовке
+    let blockHeaderBtn = document.getElementById('blockHeaderBtn');
+    if (showBlockBtn && !blockHeaderBtn) {
+      blockHeaderBtn = document.createElement('button');
+      blockHeaderBtn.id = 'blockHeaderBtn';
+      blockHeaderBtn.type = 'button';
+      blockHeaderBtn.className = 'btn-block-user';
+      blockHeaderBtn.textContent = '🛡 Заблокировать';
+      blockHeaderBtn.style.marginLeft = '12px';
+      blockHeaderBtn.addEventListener('click', async () => {
+        if (confirm(`Заблокировать ID ${selectedTargetId}? Вы оба не сможете видеть друг друга.`)) {
+          await blockUser(selectedTargetId);
+          selectedTargetId = 'ALL';
+          messagesAreaEl.innerHTML = '';
+          renderOnlineList();
+          updateRoomHeader();
+          renderMessages({ forceScrollBottom: true });
+        }
+      });
+      currentRoomTitleEl.parentNode.appendChild(blockHeaderBtn);
+    } else if (!showBlockBtn && blockHeaderBtn) {
+      blockHeaderBtn.remove();
+    }
+    
     if (supremeChatBtn) {
       supremeChatBtn.classList.toggle('active', selectedTargetId === '1003');
       supremeChatBtn.setAttribute('aria-pressed', String(selectedTargetId === '1003'));
@@ -3557,6 +3594,7 @@
         isSupremeChatSelected = false;
         renderOnlineList();
         updateRoomHeader();
+        messagesAreaEl.innerHTML = '';
         renderMessages({ forceScrollBottom: true });
       });
     }
@@ -3571,6 +3609,7 @@
         isSupremeChatSelected = false;
         renderOnlineList();
         updateRoomHeader();
+        messagesAreaEl.innerHTML = '';
         renderMessages({ forceScrollBottom: true });
       });
     }
