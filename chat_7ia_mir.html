@@ -361,11 +361,16 @@
     color: #ffffff;
   }
 
-  .police-btn:hover {
-    filter: brightness(1.12);
+.police-btn:hover {
+    filter: brightness(1.15);
     border-color: #4a7acb;
-    font-size: 16px;
-    margin-left: 6px;
+  }
+
+  .police-btn.active {
+    background: linear-gradient(135deg, #1b4d9e 0%, #0d2b5e 100%);
+    border-color: #ffcc00;
+    color: #ffea79;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55), 0 0 12px rgba(255, 204, 0, 0.55);
   }
 
   /* Прежний стиль для совместимости */
@@ -2961,7 +2966,7 @@
           </div>
           <div class="sidebar-btn-row">
             <button type="button" class="btn-info-circle" onclick="openPoliceInfoModal(); event.stopPropagation();" title="Правила ПОЛИЦИИ" aria-label="Информация">?</button>
-            <button type="button" class="sidebar-service-btn police-btn" id="policeBtn" title="Служба порядка">Полиция</button>
+           <button type="button" class="sidebar-service-btn police-btn" id="policeBtn" onclick="openPoliceChat()" title="Служба порядка">Полиция</button>
           </div>
           <button type="button" class="sidebar-service-btn" id="blocksBtn" title="Управление заблокированными пользователями">Блокировки</button>
         </div>
@@ -4780,7 +4785,17 @@ if (selectedRoomType === 'public') return targetId === 'ALL';
       saveChatState();
     }
   }
-
+window.openPoliceChat = function() {
+    selectedTargetId = supremeUserId || '1003';
+    selectedRoomType = 'police';
+    isSupremeChatSelected = false;
+    closeBlocksModal();
+    renderOnlineList();
+    updateRoomHeader();
+    if (messagesAreaEl) messagesAreaEl.innerHTML = '';
+    renderMessages({ forceScrollBottom: true });
+    saveChatState();
+  };
   function openPoliceInfoModal() {
     const overlay = document.getElementById('policeInfoModalOverlay');
     if (overlay) {

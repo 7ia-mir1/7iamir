@@ -503,7 +503,26 @@ async function handlePresence(request, env, session) {
     const result = await env.DB.prepare(
       `SELECT users.id AS id, users.role AS role
        FROM users
-       LEFT JOIN online_presence AS presence ON presence.user_id = users.id
+const result = await env.DB.prepare(
+   `SELECT users.id AS id, users.role AS role
+    FROM users
+    LEFT JOIN online_presence AS presence ON presence.user_id = users.id
+    WHERE users.id <> ?
+      AND NOT EXISTS (
+        SELECT 1 FROM user_blocks
+        WHERE (blocker_id = ? AND blocked_id = users.id)
+           OR (blocker_id = users.id AND blocked_id = ?)
+      )
+      AND (
+        COALESCE(presence.last_seen_at, 0) >= ?
+        OR EXISTS (
+          SELECT 1 FROM auth_sessions
+          WHERE auth_sessions.user_id = users.id
+            AND auth_sessions.expires_at > ?
+        )
+      )
+    ORDER BY users.id`,
+ ).bind(session.id, session.id, session.id, now - PRESENCE_TTL_SECONDS, now).all();
        WHERE users.id <> ?
          AND (
            COALESCE(presence.last_seen_at, 0) >= ?
