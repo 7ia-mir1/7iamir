@@ -2264,8 +2264,38 @@
     box-shadow: none;
   }
 
+.user-item {
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .user-item:focus,
+  .user-item:focus-visible {
+    outline: none;
+  }
+
   .user-item.active {
     border-left-width: 3px;
+  }
+
+  @keyframes unreadBlink {
+    0%, 100% {
+      background: rgba(255, 215, 0, 0.95);
+      border-color: #ff4500;
+      color: #000000;
+      box-shadow: 0 0 8px rgba(255, 69, 0, 0.8);
+    }
+    50% {
+      background: rgba(255, 248, 231, 0.6);
+      border-color: #b89867;
+      color: var(--text-main);
+      box-shadow: none;
+    }
+  }
+
+  .user-item.has-unread:not(.active) {
+    animation: unreadBlink 1s infinite;
+    font-weight: 700;
   }
 
   .user-info {
@@ -3382,6 +3412,40 @@
     throw error;
   }
 
+
+ function getReadMap() {
+    if (!myId) return {};
+    try {
+      return JSON.parse(localStorage.getItem(`7ia_chat_read_${myId}`) || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  function markChatAsRead(roomType, targetId) {
+    if (!myId || !targetId) return;
+    const map = getReadMap();
+    map[`${roomType}:${targetId}`] = Date.now();
+    try {
+      localStorage.setItem(`7ia_chat_read_${myId}`, JSON.stringify(map));
+    } catch {}
+  }
+
+  function hasUnreadMessages(roomType, targetId) {
+    if (!myId) return false;
+    const map = getReadMap();
+    const lastRead = Number(map[`${roomType}:${targetId}`] || 0);
+    return messages.some(m => {
+      if (m.deletedForMe) return false;
+      if (String(m.senderId) !== String(targetId) || String(m.targetId) !== String(myId)) return false;
+      const isSupreme = m.channel === 'supreme';
+      if (roomType === 'supreme' ? !isSupreme : isSupreme) return false;
+      return Number(m.createdAt || 0) > lastRead;
+    });
+  } 
+
+
+
   function renderOnlineList() {
     if (!onlineListEl) {
       console.warn('[Chat] ✗ renderOnlineList: onlineListEl is not available');
@@ -3397,9 +3461,10 @@
       }
 
       const isSelected = selectedRoomType === 'private' && u.id === selectedTargetId;
+      const hasUnreadPrivate = !isSelected && hasUnreadMessages('private', u.id);
       const item = document.createElement('button');
       item.type = 'button';
-      item.className = 'user-item' + (isSelected ? ' active' : '');
+      item.className = 'user-item' + (isSelected ? ' active' : '') + (hasUnreadPrivate ? ' has-unread' : '');
       item.setAttribute('aria-pressed', String(isSelected));
       item.innerHTML = `
         <span class="user-info">
@@ -3412,6 +3477,7 @@
         selectedTargetId = u.id;
         selectedRoomType = 'private';
         isSupremeChatSelected = false;
+        markChatAsRead('private', u.id);
         closeBlocksModal();
         messagesAreaEl.innerHTML = '';
         renderOnlineList();
@@ -3423,12 +3489,18 @@
       if (supremeUserId === myId) {
         const serviceItem = document.createElement('button');
         const isServiceSelected = selectedRoomType === 'supreme' && u.id === selectedTargetId;
+        const hasUnreadSupreme = !isServiceSelected && hasUnreadMessages('supreme', u.id);
         serviceItem.type = 'button';
-        serviceItem.className = 'user-item' + (isServiceSelected ? ' active' : '');
+        serviceItem.className = 'user-item' + (isServiceSelected ? ' active' : '') + (hasUnreadSupreme ? ' has-unread' : '');
         serviceItem.setAttribute('aria-pressed', String(isServiceSelected));
-        serviceItem.textContent = `Обращение Верховному: ID ${u.id}`;
+        serviceItem.innerHTML = `
+          <span class="user-info">
+            <span class="user-label">Верховному: ID ${u.id}</span>
+          </span>
+        `;
         serviceItem.addEventListener('click', () => openDirectChat(u.id, true));
         onlineListEl.appendChild(serviceItem);
+      }
       }
     });
   }
@@ -3447,6 +3519,7 @@
       });
     }
     selectedTargetId = targetId;
+    markChatAsRead(selectedRoomType, targetId);
     selectedRoomType = openedFromSupremeButton ? 'supreme' : 'private';
     isSupremeChatSelected = openedFromSupremeButton;
     closeBlocksModal();
@@ -3484,7 +3557,7 @@
       title = 'Общий зал';
       showBlockBtn = false;
     } else if (selectedRoomType === 'supreme') {
-      title = supremeUserId === myId ? `Обращение Верховному: ID ${selectedTargetId}` : 'Чат с Верховным';
+     title = supremeUserId === myId ? `Верховному: ID ${selectedTargetId}` : 'Верховный';
       showBlockBtn = false;
     } else if (selectedRoomType === 'police') {
       title = 'ПОЛИЦИЯ';
@@ -3686,7 +3759,8 @@
     
     // Сразу загружаем онлайн-пользователей
     refreshOnlineUsers();
-    
+    loadSavedMessages();
+    loadMessagesFromServer();
     // Затем периодически повторяем
     window.setInterval(sendPresenceHeartbeat, 15000);
     window.setInterval(refreshOnlineUsers, 5000);
@@ -3698,7 +3772,7 @@
   function initializeSupremeButton() {
     try {
       if (supremeChatBtn) {
-        supremeChatBtn.disabled = !supremeUserId || myId === supremeUserId;
+        supremeChatBtn.disabled = !supremeUserId;
         supremeChatBtn.setAttribute('aria-disabled', String(supremeChatBtn.disabled));
         console.log(`[Chat] ✓ initializeSupremeButton: supremeChatBtn is ready (myId=${myId})`);
       } else {
@@ -3734,9 +3808,16 @@
       blocksBtn.addEventListener('click', openBlocksModal);
     }
 
-    if (supremeChatBtn) {
+if (supremeChatBtn) {
       supremeChatBtn.addEventListener('click', () => {
-        if (supremeUserId) openDirectChat(supremeUserId, true);
+        if (myId === supremeUserId) {
+          const target = (selectedTargetId && selectedTargetId !== 'ALL' && selectedTargetId !== myId)
+            ? selectedTargetId
+            : (onlineUsers.find(u => u.id !== 'ALL' && u.id !== myId)?.id || null);
+          if (target) openDirectChat(target, true);
+        } else if (supremeUserId) {
+          openDirectChat(supremeUserId, true);
+        }
       });
     }
 
@@ -3928,7 +4009,8 @@
       expiresAt: row.expires_at ? Number(row.expires_at) * 1000 : null,
       deleteScope: row.delete_scope || 'off',
       noSave: Boolean(row.no_save),
-      channel: row.channel || 'private',
+    channel: row.channel || 'private',
+      synced: true,
     };
   }
 
@@ -4322,6 +4404,10 @@
       saveMessagesIfNeeded();
       renderMessages({ forceScrollBottom: shouldScrollDown });
       console.warn('Сервер чата недоступен; сообщение оставлено в локальной истории:', error);
+      if (bottomSystemNoticeEl) {
+        bottomSystemNoticeEl.style.display = 'block';
+        bottomSystemNoticeEl.textContent = `⚠️ Ошибка отправки на сервер: ${error.message}`;
+      }
     });
   }
 
