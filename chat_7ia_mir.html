@@ -4162,8 +4162,8 @@ const { forceScrollBottom = false } = options;
     // Индикатор непрочитанных сообщений для кнопок "Полиция" и "Верховный"
     try {
       const allList = typeof allMessages !== 'undefined' ? allMessages : (typeof messages !== 'undefined' ? messages : []);
-      const policeBtn = document.getElementById('policeChatBtn') || Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Полиция');
-      const supremeBtn = document.getElementById('supremeChatBtn') || Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Верховный');
+  const policeBtn = document.getElementById('policeChatBtn') || Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Полиция'));
+const supremeBtn = document.getElementById('supremeChatBtn') || document.getElementById('supremeBtn') || Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Верховный'));
 
       const checkServiceUnread = (channelName, btnEl) => {
         if (!btnEl) return;
