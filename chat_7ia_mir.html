@@ -2918,7 +2918,35 @@
   .message-row.mine .msg-bubble {
     background: #FFD700 !important;
   }
+/* Белый фон, чёрные буквы и увеличенный шрифт в поле ввода */
+textarea[placeholder*="Введите сообщение"] {
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-size: 16px !important;
+  font-weight: 500;
+}
+textarea[placeholder*="Введите сообщение"]::placeholder {
+  color: #555555 !important;
+}
 
+/* Красное мигание краёв поля ввода при нажатии "Ответить" */
+@keyframes replyInputFlash {
+  0%, 100% { box-shadow: 0 0 0 2px #ff0000, inset 0 0 6px rgba(255, 0, 0, 0.35); border-color: #ff0000 !important; }
+  50% { box-shadow: 0 0 12px 3px #ff2a2a, inset 0 0 10px rgba(255, 0, 0, 0.55); border-color: #ff6666 !important; }
+}
+textarea.reply-flash-border {
+  border: 2px solid #ff0000 !important;
+  animation: replyInputFlash 0.9s infinite !important;
+}
+
+/* Мигание кнопок "Полиция" и "Верховный" при новом сообщении */
+@keyframes serviceBtnUnread {
+  0%, 100% { box-shadow: 0 0 0 2px #ff2a2a, 0 0 10px #ff2a2a; filter: brightness(1.05); }
+  50% { box-shadow: 0 0 0 4px #ffd700, 0 0 18px #ff2a2a; filter: brightness(1.3); }
+}
+.service-btn-unread {
+  animation: serviceBtnUnread 0.9s infinite !important;
+}
 </style>
 </head>
 <body>
@@ -4002,7 +4030,7 @@ if (supremeChatBtn) {
       expiresAt: row.expires_at ? Number(row.expires_at) * 1000 : null,
       deleteScope: row.delete_scope || 'off',
       noSave: Boolean(row.no_save),
-    channel: row.channel || 'private',
+   channel: selectedRoomType === 'police' ? 'police' : (selectedRoomType === 'supreme' ? 'supreme' : 'private'),
       synced: true,
     };
   }
@@ -4097,6 +4125,7 @@ if (supremeChatBtn) {
         file_data_url: message.fileDataUrl,
         delete_scope: message.deleteScope,
         no_save: noSave,
+        channel: selectedRoomType === 'public' ? 'public' : (selectedRoomType === 'police' ? 'police' : (selectedRoomType === 'supreme' ? 'supreme' : 'private')),
         expires_in: expiresIn
       })
     });
@@ -4128,7 +4157,37 @@ if (supremeChatBtn) {
     const { forceScrollBottom = false } = options;
     const wasNearBottom = isScrolledNearBottom();
     const previousScrollTop = messagesAreaEl.scrollTop;
+const { forceScrollBottom = false } = options;
+    const wasNearBottom = isScrolledNearBottom();
+    const previousScrollTop = messagesAreaEl.scrollTop;
 
+    // Индикатор непрочитанных сообщений для кнопок "Полиция" и "Верховный"
+    try {
+      const allList = typeof allMessages !== 'undefined' ? allMessages : (typeof messages !== 'undefined' ? messages : []);
+      const policeBtn = document.getElementById('policeChatBtn') || Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Полиция');
+      const supremeBtn = document.getElementById('supremeChatBtn') || Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Верховный');
+
+      const checkServiceUnread = (channelName, btnEl) => {
+        if (!btnEl) return;
+        const seenKey = `7iamir_seen_${myId}_${channelName}`;
+        const latestIncoming = allList
+          .filter(m => m.channel === channelName && String(m.senderId) !== String(myId))
+          .reduce((max, m) => Math.max(max, Number(m.createdAt || m.timestamp || 0)), 0);
+
+        if (selectedRoomType === channelName) {
+          if (latestIncoming > 0) localStorage.setItem(seenKey, String(latestIncoming));
+          btnEl.classList.remove('service-btn-unread');
+        } else {
+          const lastSeen = Number(localStorage.getItem(seenKey) || 0);
+          btnEl.classList.toggle('service-btn-unread', latestIncoming > lastSeen);
+        }
+      };
+
+      checkServiceUnread('police', policeBtn);
+      checkServiceUnread('supreme', supremeBtn);
+    } catch (e) {}
+
+    messagesAreaEl.replaceChildren();
     messagesAreaEl.replaceChildren();
 
     const now = Date.now();
@@ -4176,7 +4235,13 @@ if (selectedRoomType === 'public') return targetId === 'ALL';
       header.className = 'msg-header';
       const senderLabel = document.createElement('span');
       senderLabel.className = 'msg-sender-id';
-      senderLabel.textContent = `ID ${msg.senderId}`;
+      const isServiceAdmin = String(msg.senderId) === String((typeof supremeUserId !== 'undefined' && supremeUserId) ? supremeUserId : '1003');
+          const msgChannel = msg.channel || selectedRoomType;
+          senderLabel.textContent = (isServiceAdmin && msgChannel === 'police')
+            ? 'Полиция'
+            : (isServiceAdmin && msgChannel === 'supreme')
+              ? 'Верховный'
+              : `ID ${msg.senderId}`;
       const timeLabel = document.createElement('span');
       timeLabel.textContent = String(msg.time || '');
       header.append(senderLabel, timeLabel);
@@ -4237,14 +4302,39 @@ if (selectedRoomType === 'public') return targetId === 'ALL';
         replyBtn.className = 'btn-reply-message';
         replyBtn.title = 'Ответить личным сообщением';
         replyBtn.textContent = '✉ Ответить';
-        replyBtn.addEventListener('click', () => {
-          openDirectChat(msg.senderId);
-        });
+replyBtn.addEventListener('click', () => {
+            if (selectedRoomType === 'police' || selectedRoomType === 'supreme') {
+              selectedTargetId = String(msg.senderId);
+              isSupremeChatSelected = selectedRoomType === 'supreme';
+              renderOnlineList();
+              updateRoomHeader();
+              renderMessages({ forceScrollBottom: true });
+              saveChatState();
+
+              // Подсвечиваем поле ввода красным и ставим туда курсор
+              const inputEl = document.querySelector('textarea[placeholder*="Введите сообщение"]');
+              if (inputEl) {
+                inputEl.classList.add('reply-flash-border');
+                inputEl.focus();
+                inputEl.placeholder = `Ответ для ID ${msg.senderId}... (Enter — отправить)`;
+                const stopFlash = () => {
+                  inputEl.classList.remove('reply-flash-border');
+                  inputEl.removeEventListener('keydown', onEnterStop);
+                };
+                const onEnterStop = (e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) stopFlash();
+                };
+                inputEl.addEventListener('keydown', onEnterStop);
+              }
+            } else {
+              openDirectChat(msg.senderId);
+            }
+          });
         actions.appendChild(replyBtn);
       }
 
       // Кнопка "Заблокировать" в личном чате (не для своих сообщений)
-      if (selectedTargetId !== 'ALL' && !isMine && selectedTargetId !== myId) {
+      if (selectedRoomType === 'private' && selectedTargetId !== 'ALL' && !isMine && selectedTargetId !== myId) {
         const blockBtn = document.createElement('button');
         blockBtn.type = 'button';
         blockBtn.className = 'btn-block-user';
