@@ -1859,7 +1859,7 @@ async function handleBlocks(request, env, session) {
     }
 
     const user = await env.DB.prepare(
-      "SELECT id FROM users WHERE id = ?",
+      "SELECT id, email FROM users WHERE id = ?",
     ).bind(blockedId).first();
     if (!user) return errorResponse("Пользователь не найден.", 404);
 
