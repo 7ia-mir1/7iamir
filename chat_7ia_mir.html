@@ -3489,12 +3489,19 @@ textarea.reply-flash-border {
 
     onlineUsers.forEach(u => {
       // Не показываем: заблокированных пользователей, тестовые фиктивные ID, и 'ALL'
-      if (isUserBlocked(u.id) || u.id === 'ALL' || u.id === 'test' || u.id === '0') {
-        return;
-      }
-
       const isSelected = selectedRoomType === 'private' && u.id === selectedTargetId;
       const hasUnreadPrivate = !isSelected && hasUnreadMessages('private', u.id);
+      const isSupremeEntry = supremeUserId === myId;
+
+      if (
+        isUserBlocked(u.id) ||
+        u.id === 'ALL' ||
+        u.id === 'test' ||
+        u.id === '0' ||
+        (!u.online && !isSelected && !hasUnreadPrivate && !isSupremeEntry)
+      ) {
+        return;
+      }
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'user-item' + (isSelected ? ' active' : '') + (hasUnreadPrivate ? ' has-unread' : '');
@@ -3703,7 +3710,7 @@ textarea.reply-flash-border {
       console.log(`[Chat] ✓ Final contacts after filtering (${contacts.length}):`, contacts.map(c => c.id));
       onlineUsers.splice(0, onlineUsers.length, onlineUsers[0], ...contacts);
       addSupremeContactsFromHistory();
-      if (selectedTargetId !== 'ALL' && !onlineUsers.some(user => user.id === selectedTargetId)) {
+      if (selectedRoomType === 'private' && selectedTargetId !== 'ALL' && !onlineUsers.some(user => user.id === selectedTargetId)) {
         onlineUsers.push({ id: selectedTargetId, label: `ID ${selectedTargetId}`, online: false, strictNoSave: false });
       }
       restoreChatState();
@@ -4125,7 +4132,11 @@ if (supremeChatBtn) {
         file_data_url: message.fileDataUrl,
         delete_scope: message.deleteScope,
         no_save: noSave,
-        channel: selectedRoomType === 'public' ? 'public' : (selectedRoomType === 'police' ? 'police' : (selectedRoomType === 'supreme' ? 'supreme' : 'private')),
+        channel: selectedRoomType === 'public'
+  ? 'public'
+  : (selectedRoomType === 'police'
+    ? 'police'
+    : (selectedRoomType === 'supreme' ? 'supreme' : 'private')),
         expires_in: expiresIn
       })
     });
