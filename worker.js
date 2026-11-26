@@ -278,7 +278,32 @@ async function sendRecoveryEmail(env, email, code) {
   });
   return response.ok;
 }
+async function sendChatNotificationEmail(env, email, senderId, channel, text) {
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL || !email) return;
 
+  const channelLabel =
+    channel === "police" ? "Полиция" :
+    channel === "supreme" ? "Верховному" :
+    "Личное сообщение";
+
+  const preview = text
+    ? text.slice(0, 200) + (text.length > 200 ? "..." : "")
+    : "[Вложение / файл]";
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.RESEND_FROM_EMAIL,
+      to: [email],
+      subject: `7ia-mir1: новое сообщение от ID ${senderId} (${channelLabel})`,
+      text: `Здравствуйте!\n\nНа портале 7ia-mir1.ru вам пришло новое сообщение (${channelLabel}) от ID ${senderId}.\n\nТекст:\n${preview}\n\nПерейти в чат: https://7ia-mir1.ru/`,
+    }),
+  });
+}
 async function handleAuth(request, env, pathname) {
   if (pathname === "/api/auth/register") {
     return errorResponse("Регистрация не поддерживается.", 405);
@@ -510,16 +535,9 @@ const result = await env.DB.prepare(
            WHERE (blocker_id = ? AND blocked_id = users.id)
               OR (blocker_id = users.id AND blocked_id = ?)
          )
-         AND (
-           COALESCE(presence.last_seen_at, 0) >= ?
-           OR EXISTS (
-             SELECT 1 FROM auth_sessions
-             WHERE auth_sessions.user_id = users.id
-               AND auth_sessions.expires_at > ?
-           )
-         )
-       ORDER BY users.id`,
-    ).bind(session.id, session.id, session.id, now - PRESENCE_TTL_SECONDS, now).all();
+         AND COALESCE(presence.last_seen_at, 0) >= ?
+    ORDER BY users.id`,
+ ).bind(session.id, session.id, session.id, now - PRESENCE_TTL_SECONDS).all();
 
 
  
@@ -761,6 +779,23 @@ async function handleChat(request, env, session) {
       message.created_at,
       message.expires_at,
     ).run();
+if (targetId !== "ALL" && recipient && recipient.email) {
+      const presence = await env.DB.prepare(
+        "SELECT last_seen_at FROM online_presence WHERE user_id = ?",
+      ).bind(targetId).first();
+
+      const isRecipientOnline = presence &&
+        Number(presence.last_seen_at) >= (createdAt - PRESENCE_TTL_SECONDS);
+
+      if (!isRecipientOnline) {
+        try {
+          await sendChatNotificationEmail(env, recipient.email, senderId, channel, text);
+        } catch (err) {
+          console.error("Не удалось отправить email-уведомление:", err);
+        }
+      }
+    }
+
 
     return jsonResponse({ message }, 201);
   }
