@@ -713,7 +713,7 @@ async function handleChat(request, env, session) {
         return errorResponse("Нельзя отправить личное сообщение самому себе.");
       }
       const recipient = await env.DB.prepare(
-        "SELECT id FROM users WHERE id = ?",
+      "SELECT id, email FROM users WHERE id = ?",
       ).bind(targetId).first();
       if (!recipient) return errorResponse("Аккаунт собеседника не найден.", 404);
       if (channel === "supreme") {
