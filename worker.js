@@ -779,25 +779,29 @@ async function handleChat(request, env, session) {
       message.created_at,
       message.expires_at,
     ).run();
-if (targetId !== "ALL" && recipient && recipient.email) {
-      const presence = await env.DB.prepare(
-        "SELECT last_seen_at FROM online_presence WHERE user_id = ?",
-      ).bind(targetId).first();
-
-      const isRecipientOnline = presence &&
-        Number(presence.last_seen_at) >= (createdAt - PRESENCE_TTL_SECONDS);
-
-      if (!isRecipientOnline) {
-        try {
-          await sendChatNotificationEmail(env, recipient.email, senderId, channel, text);
-        } catch (err) {
-          console.error("Не удалось отправить email-уведомление:", err);
-        }
+let emailDebug = "skipped";
+    if (targetId !== "ALL" && recipient && recipient.email) {
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "authorization": `Bearer ${env.RESEND_API_KEY}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            from: env.RESEND_FROM_EMAIL,
+            to: [recipient.email],
+            subject: `7ia-mir1: новое сообщение от ID ${senderId}`,
+            text: `Вам пришло новое сообщение от ID ${senderId}:\n\n${text || "[Файл]"}`,
+          }),
+        });
+        emailDebug = `${res.status}: ${await res.text()}`;
+      } catch (err) {
+        emailDebug = `error: ${err.message}`;
       }
     }
 
-
-    return jsonResponse({ message }, 201);
+    return jsonResponse({ message, emailDebug }, 201);
   }
 
   return errorResponse("Метод не поддерживается.", 405);
