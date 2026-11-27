@@ -1,4 +1,4 @@
-/**
+﻿/**
  * АВТОНОМНЫЙ МОДУЛЬ «ПРАВИЛА МИРА СКАЗКИ — ДОМОВИЧОК ПОД ГРАММОФОНОМ» (rules.js)
  * - Перехватывает нажатие на лесовичка/домовичка под граммофоном в Избе (izba_domovoi)
  * - Слева: портрет старичка-домовичка из Избы, справа: правила сайта чёрным шрифтом + кнопка «✔ Ознакомлен»
@@ -75,10 +75,10 @@
                     canvas.height = 260;
                     const ctx = canvas.getContext('2d');
                     // Координаты старичка-домовичка под граммофоном (левый нижний угол сундука)
-                    const sx = iw * 0.085;
-                    const sy = ih * 0.625;
-                    const sw = iw * 0.105;
-                    const sh = ih * 0.225;
+                    const sx = iw * 0.125;
+                    const sy = ih * 0.615;
+                    const sw = iw * 0.095;
+                    const sh = ih * 0.215;
                     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
                     domovoiDataUrlCache = canvas.toDataURL('image/jpeg', 0.92);
                     resolve(domovoiDataUrlCache);
@@ -352,7 +352,7 @@
             if (!infoModal.classList.contains('active')) return;
             const titleEl = document.getElementById('modalTitle');
             const titleText = (titleEl && titleEl.innerText || '').toLowerCase();
-            if (titleText.includes('домово') || titleText.includes('лесович')) {
+            if (titleText.includes('домово') || titleText.includes('лесович') || titleText.includes('хранитель горницы')) {
                 if (typeof window.closeModal === 'function') window.closeModal();
                 else infoModal.classList.remove('active');
                 openRulesModal();
