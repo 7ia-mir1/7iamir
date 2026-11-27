@@ -792,12 +792,13 @@ let emailDebug = "skipped";
             headers: {
               "authorization": `Bearer ${env.RESEND_API_KEY}`,
               "content-type": "application/json",
-            },
+           },
             body: JSON.stringify({
               from: env.RESEND_FROM_EMAIL,
               to: [targetUser.email],
               subject: `7ia-mir1: новое сообщение от ID ${message.sender_id}`,
-              text: `Вам пришло новое сообщение от ID ${message.sender_id}:\n\n${message.text || "[Файл]"}`,
+              text: `Вам пришло новое сообщение от ID ${message.sender_id}.\n\nПрочитать и ответить можно на сайте:\nhttps://7ia-mir1.ru/`,
+              html: `<p>Вам пришло новое сообщение от <strong>ID ${message.sender_id}</strong>.</p><p>Прочитать и ответить можно на сайте: <a href="https://7ia-mir1.ru/">https://7ia-mir1.ru/</a></p>`,
             }),
           });
           emailDebug = `${res.status}: ${await res.text()}`;
