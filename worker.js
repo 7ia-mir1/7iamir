@@ -1828,7 +1828,7 @@ async function handleWorkerRequest(request, env) {
       return env.ASSETS.fetch(request);
     } catch (error) {
       console.error("Worker request failed:", error);
-      return errorResponse("Внутренняя ошибка сервера.", 500);
+      return errorResponse(`Ошибка сервера: ${err.message}`, 500);
     }
 }
 
