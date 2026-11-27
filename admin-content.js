@@ -11,13 +11,17 @@
     element.style.color = isError ? "#8b1e0b" : "#1b5e20";
   }
 
-  function fillKeyList(select, values, category) {
-    const keys = Object.keys(values).sort((a, b) => a.localeCompare(b, "ru"));
+function fillKeyList(select, values, category) {
+    const keys = Object.keys(values).sort((a, b) =>
+      String(values[a] || a).localeCompare(String(values[b] || b), "ru")
+    );
     select.replaceChildren();
     for (const key of keys) {
       const option = document.createElement("option");
       option.value = key;
-      option.textContent = `${key.slice(0, 100)}${key.length > 100 ? "…" : ""}`;
+      const preview = String(values[key] || key).replace(/\s+/g, " ").trim();
+      option.textContent = `${preview.slice(0, 100)}${preview.length > 100 ? "…" : ""}`;
+      option.title = `${key}: ${preview}`;
       select.appendChild(option);
     }
     if (keys.length && !keys.includes(selectedKeys[category])) {
