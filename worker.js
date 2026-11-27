@@ -796,11 +796,11 @@ let emailDebug = "skipped";
             body: JSON.stringify({
               from: env.RESEND_FROM_EMAIL,
               to: [targetUser.email],
-              subject: `7ia-mir1: новое сообщение от ID ${message.sender_id}`,
-              text: `Вам пришло новое сообщение от ID ${message.sender_id}.\n\nПрочитать и ответить можно на сайте:\nhttps://7ia-mir1.ru/`,
-              html: `<p>Вам пришло новое сообщение от <strong>ID ${message.sender_id}</strong>.</p><p>Прочитать и ответить можно на сайте: <a href="https://7ia-mir1.ru/">https://7ia-mir1.ru/</a></p>`,
+              subject: `7iamir: новое сообщение от ID ${message.sender_id}`,
+              text: `Вам пришло новое сообщение от ID ${message.sender_id}.\n\nПрочитать и ответить можно на сайте:\n${new URL(request.url).origin}/`,
+              html: `<p>Вам пришло новое сообщение от <strong>ID ${message.sender_id}</strong>.</p><p>Прочитать и ответить можно на сайте: <a href="${new URL(request.url).origin}/">${new URL(request.url).origin}/</a></p>`,
             }),
-          });
+            });
           emailDebug = `${res.status}: ${await res.text()}`;
         } else {
           emailDebug = `no_user_or_email_in_db: target=${message.target_id}, found=${!!targetUser}, email=${targetUser?.email}`;
