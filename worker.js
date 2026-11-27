@@ -1798,6 +1798,79 @@ async function handleNews(request, env, session, isAdminRoute) {
 
   return errorResponse("Метод не поддерживается.", 405);
 }
+async function handleRules(request, env, session, isAdminRoute) {
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS site_rules (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL DEFAULT '',
+        text TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS site_rules_reads (
+        user_id TEXT PRIMARY KEY,
+        rules_updated_at INTEGER NOT NULL,
+        read_at INTEGER NOT NULL
+      )`
+    ),
+  ]);
+
+  if (request.method === "GET") {
+    const rule = await env.DB.prepare(
+      "SELECT id, title, text, updated_at FROM site_rules WHERE id = 'main'"
+    ).first();
+    const readRow = await env.DB.prepare(
+      "SELECT rules_updated_at FROM site_rules_reads WHERE user_id = ?"
+    ).bind(session.id).first();
+
+    const isRead = Boolean(
+      rule && readRow && Number(readRow.rules_updated_at) >= Number(rule.updated_at)
+    );
+    return jsonResponse({ rules: rule || null, is_read: isRead ? 1 : 0 });
+  }
+
+  if (request.method === "POST" && !isAdminRoute) {
+    const rule = await env.DB.prepare(
+      "SELECT updated_at FROM site_rules WHERE id = 'main'"
+    ).first();
+    const now = Math.floor(Date.now() / 1000);
+    const version = rule ? Number(rule.updated_at) : now;
+    await env.DB.prepare(
+      `INSERT INTO site_rules_reads (user_id, rules_updated_at, read_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET
+         rules_updated_at = excluded.rules_updated_at,
+         read_at = excluded.read_at`
+    ).bind(session.id, version, now).run();
+
+    return jsonResponse({ status: "ok" });
+  }
+
+  if (isAdminRoute && request.method === "POST") {
+    const body = await readJson(request);
+    if (!body) return errorResponse("Ожидается JSON-объект.");
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    if (!text || text.length > 15000) {
+      return errorResponse("Текст правил не должен быть пустым или превышать 15000 символов.");
+    }
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(
+      `INSERT INTO site_rules (id, title, text, updated_at)
+       VALUES ('main', ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         text = excluded.text,
+         updated_at = excluded.updated_at`
+    ).bind(title.slice(0, 200), text, now).run();
+
+    return jsonResponse({ status: "ok", updated_at: now }, 201);
+  }
+
+  return errorResponse("Метод не поддерживается.", 405);
+}
 async function handleWorkerRequest(request, env) {
     const requestUrl = new URL(request.url);
     const { pathname } = requestUrl;
@@ -1920,6 +1993,8 @@ async function handleWorkerRequest(request, env) {
       if (pathname === "/api/admin/images") return await handleAdminImages(request, env);
       if (pathname === "/api/news") return await handleNews(request, env, session, false);
       if (pathname === "/api/admin/news") return await handleNews(request, env, session, true);
+      if (pathname === "/api/rules") return await handleRules(request, env, session, false);
+      if (pathname === "/api/admin/rules") return await handleRules(request, env, session, true);
       return env.ASSETS.fetch(request);
     } catch (error) {
       console.error("Worker request failed:", error);
