@@ -811,6 +811,9 @@ let emailDebug = "skipped";
 
     return jsonResponse({ message, emailDebug }, 201);
 }
+
+return errorResponse("Метод не поддерживается.", 405);
+}
 async function handleYagaChat(request, env) {
   if (request.method !== "POST") {
     return errorResponse("Метод не поддерживается.", 405);
