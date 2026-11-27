@@ -781,30 +781,35 @@ async function handleChat(request, env, session) {
     ).run();
 let emailDebug = "skipped";
     try {
-      if (message && message.target_id !== "ALL" && typeof recipient !== "undefined" && recipient && recipient.email) {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "authorization": `Bearer ${env.RESEND_API_KEY}`,
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            from: env.RESEND_FROM_EMAIL,
-            to: [recipient.email],
-            subject: `7ia-mir1: новое сообщение от ID ${message.sender_id}`,
-            text: `Вам пришло новое сообщение от ID ${message.sender_id}:\n\n${message.text || "[Файл]"}`,
-          }),
-        });
-        emailDebug = `${res.status}: ${await res.text()}`;
-      } else {
-        emailDebug = `not_sent: target=${message?.target_id}, hasRecipient=${typeof recipient !== "undefined" && !!recipient}, email=${typeof recipient !== "undefined" ? recipient?.email : "undef"}`;
+      if (message && message.target_id && message.target_id !== "ALL") {
+        const targetUser = await env.DB.prepare(
+          "SELECT id, email FROM users WHERE id = ?"
+        ).bind(String(message.target_id)).first();
+
+        if (targetUser && targetUser.email) {
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${env.RESEND_API_KEY}`,
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              from: env.RESEND_FROM_EMAIL,
+              to: [targetUser.email],
+              subject: `7ia-mir1: новое сообщение от ID ${message.sender_id}`,
+              text: `Вам пришло новое сообщение от ID ${message.sender_id}:\n\n${message.text || "[Файл]"}`,
+            }),
+          });
+          emailDebug = `${res.status}: ${await res.text()}`;
+        } else {
+          emailDebug = `no_user_or_email_in_db: target=${message.target_id}, found=${!!targetUser}, email=${targetUser?.email}`;
+        }
       }
     } catch (err) {
       emailDebug = `fatal_error: ${err.message}`;
     }
 
-    return jsonResponse({ message, emailDebug }, 201);}
-  return errorResponse("Метод не поддерживается.", 405);
+    return jsonResponse({ message, emailDebug }, 201);
 }
 async function handleYagaChat(request, env) {
   if (request.method !== "POST") {
