@@ -1714,7 +1714,90 @@ async function handleAdminImages(request, env) {
 
   return errorResponse("Метод не поддерживается.", 405);
 }
+async function handleNews(request, env, session, isAdminRoute) {
+  await env.DB.batch([
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS site_news (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL DEFAULT '',
+        text TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS site_news_reads (
+        user_id TEXT NOT NULL,
+        news_id TEXT NOT NULL,
+        read_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, news_id)
+      )`
+    ),
+  ]);
 
+  if (request.method === "GET") {
+    const result = await env.DB.prepare(
+      `SELECT n.id, n.title, n.text, n.created_at,
+              CASE WHEN r.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_read
+       FROM site_news n
+       LEFT JOIN site_news_reads r
+         ON r.news_id = n.id AND r.user_id = ?
+       ORDER BY n.created_at DESC
+       LIMIT 100`
+    ).bind(session.id).all();
+
+    return jsonResponse({ news: result.results || [] });
+  }
+
+  if (request.method === "POST" && !isAdminRoute) {
+    const body = await readJson(request);
+    const newsId = body && typeof body.news_id === "string" ? body.news_id.trim() : "";
+    if (!newsId || newsId.length > 100) {
+      return errorResponse("Укажите корректный ID новости.");
+    }
+    const now = Math.floor(Date.now() / 1000);
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO site_news_reads (user_id, news_id, read_at)
+       VALUES (?, ?, ?)`
+    ).bind(session.id, newsId, now).run();
+
+    return jsonResponse({ status: "ok", news_id: newsId });
+  }
+
+  if (isAdminRoute && request.method === "POST") {
+    const body = await readJson(request);
+    if (!body) return errorResponse("Ожидается JSON-объект.");
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    if (!text || text.length > 5000) {
+      return errorResponse("Текст новости не должен быть пустым или превышать 5000 символов.");
+    }
+    const item = {
+      id: "news_" + Date.now() + "_" + crypto.randomUUID().slice(0, 6),
+      title: title.slice(0, 200),
+      text,
+      created_at: Math.floor(Date.now() / 1000),
+    };
+    await env.DB.prepare(
+      `INSERT INTO site_news (id, title, text, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).bind(item.id, item.title, item.text, item.created_at).run();
+
+    return jsonResponse({ item }, 201);
+  }
+
+  if (isAdminRoute && request.method === "DELETE") {
+    const url = new URL(request.url);
+    const id = (url.searchParams.get("id") || "").trim();
+    if (!id || id.length > 100) return errorResponse("Укажите ID новости.");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM site_news_reads WHERE news_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM site_news WHERE id = ?").bind(id),
+    ]);
+    return jsonResponse({ status: "ok", id });
+  }
+
+  return errorResponse("Метод не поддерживается.", 405);
+}
 async function handleWorkerRequest(request, env) {
     const requestUrl = new URL(request.url);
     const { pathname } = requestUrl;
@@ -1835,6 +1918,8 @@ async function handleWorkerRequest(request, env) {
       if (pathname === "/api/admin/content") return await handleAdminContent(request, env);
       if (pathname === "/api/images") return await handleImages(request, env);
       if (pathname === "/api/admin/images") return await handleAdminImages(request, env);
+      if (pathname === "/api/news") return await handleNews(request, env, session, false);
+      if (pathname === "/api/admin/news") return await handleNews(request, env, session, true);
       return env.ASSETS.fetch(request);
     } catch (error) {
       console.error("Worker request failed:", error);
