@@ -780,7 +780,7 @@ async function handleChat(request, env, session) {
       message.expires_at,
     ).run();
 let emailDebug = "skipped";
-    if (targetId !== "ALL" && recipient && recipient.email) {
+    if (message && message.target_id !== "ALL" && recipient && recipient.email) {
       try {
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -791,8 +791,8 @@ let emailDebug = "skipped";
           body: JSON.stringify({
             from: env.RESEND_FROM_EMAIL,
             to: [recipient.email],
-            subject: `7ia-mir1: новое сообщение от ID ${senderId}`,
-            text: `Вам пришло новое сообщение от ID ${senderId}:\n\n${text || "[Файл]"}`,
+            subject: `7ia-mir1: новое сообщение от ID ${message.sender_id}`,
+            text: `Вам пришло новое сообщение от ID ${message.sender_id}:\n\n${message.text || "[Файл]"}`,
           }),
         });
         emailDebug = `${res.status}: ${await res.text()}`;
@@ -802,6 +802,7 @@ let emailDebug = "skipped";
     }
 
     return jsonResponse({ message, emailDebug }, 201);
+
   }
 
   return errorResponse("Метод не поддерживается.", 405);
