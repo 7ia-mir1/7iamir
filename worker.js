@@ -1,4 +1,4 @@
-const JSON_HEADERS = {
+﻿const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store",
 };
@@ -1853,9 +1853,7 @@ async function handleRules(request, env, session, isAdminRoute) {
     if (!body) return errorResponse("Ожидается JSON-объект.");
     const title = typeof body.title === "string" ? body.title.trim() : "";
     const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text || text.length > 15000) {
-      return errorResponse("Текст правил не должен быть пустым или превышать 15000 символов.");
-    }
+    if (text.length > 15000) { return errorResponse("Текст правил не должен превышать 15000 символов."); } if (!text) { await env.DB.prepare("DELETE FROM site_rules WHERE id = 'main'").run(); return jsonResponse({ status: "ok", cleared: true }); }
     const now = Math.floor(Date.now() / 1000);
     await env.DB.prepare(
       `INSERT INTO site_rules (id, title, text, updated_at)

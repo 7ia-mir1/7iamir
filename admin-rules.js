@@ -1,4 +1,4 @@
-/**
+﻿/**
  * АВТОНОМНЫЙ МОДУЛЬ РЕДАКТИРОВАНИЯ ПРАВИЛ САЙТА В АДМИНКЕ (admin-rules.js)
  * Автоматически встраивает вкладку «📜 Правила сайта (Домовичок)» в admin.html.
  */
@@ -36,11 +36,7 @@
 
         const title = (titleEl.value || '').trim();
         const text = (textEl.value || '').trim();
-        if (!text) {
-            statusEl.style.color = '#8b1e0b';
-            statusEl.textContent = 'Введите текст правил перед сохранением.';
-            return;
-        }
+        
 
         btn.disabled = true;
         statusEl.style.color = '#5a3818';
@@ -56,7 +52,7 @@
             if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
 
             statusEl.style.color = '#1b5e20';
-            statusEl.textContent = '✔ Правила сайта сохранены! Теперь при нажатии на лесовичка под граммофоном откроется этот текст.';
+            statusEl.textContent = '✔ Правила сайта обновлены (если поля пустые — текст полностью очищен).';
         } catch (err) {
             statusEl.style.color = '#8b1e0b';
             statusEl.textContent = `Ошибка сохранения: ${err.message}`;
